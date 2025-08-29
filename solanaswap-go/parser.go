@@ -785,6 +785,15 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 		poolInAccountIndex = 4
 		poolOutAccountIndex = 5
 		protocol = "Meteora DAMM V2"
+	case progID.Equals(ZEROFI):
+		poolAccountIndex = 0
+		poolInAccountIndex = 2
+		poolOutAccountIndex = 4
+		protocol = "ZeroFi"
+		discriminatorLen = 1
+		discriminatorWhiteList = [][]byte{
+			{6},
+		}
 	default:
 		err = errors.New("unknown progID")
 		log.Println("unknown progID", p.txInfo.Signatures, progID)
