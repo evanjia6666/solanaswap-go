@@ -1,6 +1,7 @@
 package solanaswapgo
 
 import (
+	"bytes"
 	"fmt"
 
 	ag_binary "github.com/gagliardetto/binary"
@@ -57,7 +58,7 @@ func (p *Parser) processPumpfunAMMSwaps(instructionIndex int) []SwapData {
 	var swaps []SwapData
 	for _, innerInstructionSet := range p.txMeta.InnerInstructions {
 		if innerInstructionSet.Index == uint16(instructionIndex) {
-			for _, innerInstruction := range innerInstructionSet.Instructions {
+			for i, innerInstruction := range innerInstructionSet.Instructions {
 				switch {
 				case p.isTransferCheck(p.convertRPCToSolanaInstruction(innerInstruction)):
 					transfer := p.processTransferCheck(p.convertRPCToSolanaInstruction(innerInstruction))
@@ -70,8 +71,23 @@ func (p *Parser) processPumpfunAMMSwaps(instructionIndex int) []SwapData {
 						swaps = append(swaps, SwapData{Type: PUMP_FUN, Data: transfer})
 					}
 				}
+
+				if p.isPumpFunAMMSwapEventInstruction(p.convertRPCToSolanaInstruction(innerInstruction)) {
+					tx, err := p.parsePumpfunAMMSwapEvent(p.convertRPCToSolanaInstruction(innerInstruction), p.allAccountKeys[p.txInfo.Message.Instructions[instructionIndex].ProgramIDIndex], int64(instructionIndex), int64(i))
+					if err != nil {
+						p.Log.Errorf("error processing Pumpfun trade event: %s", err)
+						continue
+					}
+					if len(swaps) > 0 {
+						swaps[0].Tx = tx
+					}
+				}
+
 			}
 		}
+	}
+	if len(swaps) > 0 {
+		p.setPumpFunSwapTxInfo(swaps[0].Tx, p.txInfo.Message.Instructions[instructionIndex])
 	}
 	return swaps
 }
@@ -93,4 +109,44 @@ func handlePumpfunTradeEvent(decoder *ag_binary.Decoder) (*PumpfunTradeEvent, er
 	}
 
 	return &trade, nil
+}
+
+func (p *Parser) setPumpFunSwapTxInfo(tx *TxInfo, instr solana.CompiledInstruction) error {
+	if !p.allAccountKeys[instr.ProgramIDIndex].Equals(PUMPFUN_AMM_PROGRAM_ID) {
+		return fmt.Errorf("mismatched program id")
+	}
+
+	if len(instr.Data) < 8 {
+		return fmt.Errorf("instruction data too short")
+	}
+
+	poolIndex := 0
+	baseMintIndex := 3
+	quoteMintIndex := 4 // wsol
+	basePoolIndex := 7  // base
+	quotePoolIndex := 8 // quote
+
+	tx.Amm = p.allAccountKeys[instr.ProgramIDIndex]
+	tx.Pool = p.allAccountKeys[instr.Accounts[poolIndex]]
+
+	switch {
+	case bytes.Equal(instr.Data[:8], PumpFunAMMBuyDiscriminator[:]):
+		// BUY: sell sol buy other
+		tx.InputMint = p.allAccountKeys[instr.Accounts[quoteMintIndex]]
+		tx.OutputMint = p.allAccountKeys[instr.Accounts[baseMintIndex]]
+		tx.PoolIn = p.allAccountKeys[instr.Accounts[quotePoolIndex]]
+		tx.PoolOut = p.allAccountKeys[instr.Accounts[basePoolIndex]]
+
+	case bytes.Equal(instr.Data[:8], PumpFunAMMSellDiscriminator[:]):
+		// SELL: sell other buy sol
+		tx.InputMint = p.allAccountKeys[instr.Accounts[baseMintIndex]]
+		tx.OutputMint = p.allAccountKeys[instr.Accounts[quoteMintIndex]]
+		tx.PoolIn = p.allAccountKeys[instr.Accounts[basePoolIndex]]
+		tx.PoolOut = p.allAccountKeys[instr.Accounts[quotePoolIndex]]
+	}
+	tx.InputMintDecimals = p.splDecimalsMap[tx.InputMint.String()]
+	tx.OutputMintDecimals = p.splDecimalsMap[tx.OutputMint.String()]
+	tx.Protocol = PROTOCOL_PUMPFUN
+
+	return nil
 }

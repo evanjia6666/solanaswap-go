@@ -6,6 +6,7 @@ import (
 
 	ag_binary "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
+	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/mr-tron/base58"
 )
 
@@ -36,7 +37,8 @@ func (p *Parser) processJupiterSwaps(instructionIndex int) []SwapData {
 						p.Log.Errorf("error processing Pumpfun trade event: %s", err)
 					}
 					if eventData != nil {
-						swaps = append(swaps, SwapData{Type: JUPITER, Data: eventData})
+						tx := p.parseJupiterTxInfo(eventData, innerInstructionSet)
+						swaps = append(swaps, SwapData{Type: JUPITER, Data: eventData, Tx: tx})
 					}
 				}
 			}
@@ -184,4 +186,44 @@ func parseJupiterEvents(events []SwapData) (*SwapInfo, error) {
 	}
 
 	return swapInfo, nil
+}
+
+func (p *Parser) parseJupiterTxInfo(eventData *JupiterSwapEventData, instr rpc.InnerInstruction) *TxInfo {
+	for n, instruction := range instr.Instructions {
+		progID := p.allAccountKeys[instruction.ProgramIDIndex]
+		if !progID.Equals(eventData.Amm) {
+			continue
+		}
+
+		tx := &TxInfo{}
+		tx.Amm = eventData.Amm
+		tx.InputMint = eventData.InputMint
+		tx.OutputMint = eventData.OutputMint
+		tx.InputAmount = eventData.InputAmount
+		tx.OutputAmount = eventData.OutputAmount
+		tx.InputMintDecimals = eventData.InputMintDecimals
+		tx.OutputMintDecimals = eventData.OutputMintDecimals
+
+		if p.setTxPoolInfo(progID, tx, p.convertRPCToSolanaInstruction(instruction)) != nil {
+			continue
+		}
+		tx.Owner = *p.txInfo.Message.Signers().Last()
+		tx.Router = JUPITER_PROGRAM_ID
+		tx.Index = uint(instr.Index*256) + uint(n)
+		return tx
+	}
+	return nil
+}
+
+func (p *Parser) extractAccountPostBalance() error {
+	p.postBalance = make(map[uint16]*rpc.TokenBalance)
+	for _, accountInfo := range p.txMeta.PostTokenBalances {
+		if !accountInfo.Mint.IsZero() {
+			if accountInfo.UiTokenAmount == nil || accountInfo.UiTokenAmount.Amount == "" {
+				continue
+			}
+			p.postBalance[accountInfo.AccountIndex] = &accountInfo
+		}
+	}
+	return nil
 }

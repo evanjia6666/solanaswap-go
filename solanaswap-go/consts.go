@@ -43,3 +43,12 @@ const (
 	MOONSHOT SwapType = "Moonshot"
 	UNKNOWN  SwapType = "Unknown"
 )
+
+const (
+	TxTypeSwap   = "swap"
+	TxTypeAdd    = "add"
+	TxTypeRemove = "remove"
+
+	TxSwapSideBuy  = "buy"
+	TxSwapSideSell = "sell"
+)

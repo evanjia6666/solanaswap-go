@@ -1,12 +1,18 @@
 package solanaswapgo
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
 	"fmt"
+	"log"
+	"math/big"
 	"strconv"
 	"time"
 
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
+	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
 )
 
@@ -30,7 +36,46 @@ type Parser struct {
 	splTokenInfoMap map[string]TokenInfo
 	splDecimalsMap  map[string]uint8
 	Log             *logrus.Logger
+
+	postBalance map[uint16]*rpc.TokenBalance
 }
+
+var (
+	swapDiscriminator = map[string]bool{
+		calculateDiscriminator("global:swap"):                   true,
+		calculateDiscriminator("global:swap_exact_out"):         true,
+		calculateDiscriminator("global:swap_exact_in"):          true,
+		calculateDiscriminator("global:swap_base_input"):        true,
+		calculateDiscriminator("global:swap_base_output"):       true,
+		calculateDiscriminator("global:swap_v2"):                true,
+		calculateDiscriminator("global:swap_with_price_impact"): true,
+		calculateDiscriminator("global:swap_exact_amount_in"):   true,
+		calculateDiscriminator("global:sell_token"):             true,
+		calculateDiscriminator("global:swap_with_partner"):      true,
+		calculateDiscriminator("global:redeem_v0"):              true,
+		calculateDiscriminator("global:sell"):                   true, // pumpfun AMM
+		calculateDiscriminator("global:buy"):                    true, // pumpfun AMM
+	}
+
+	removeDiscriminator = map[string]bool{
+		calculateDiscriminator("global:remove_liquidity_by_range"): true,
+		calculateDiscriminator("global:remove_liquidity"):          true,
+		calculateDiscriminator("global:remove_all_liquidity"):      true,
+		calculateDiscriminator("global:decrease_liquidity"):        true,
+		calculateDiscriminator("global:decrease_liquidity_v2"):     true,
+		calculateDiscriminator("global:withdraw"):                  true,
+	}
+
+	addDiscriminator = map[string]bool{
+		calculateDiscriminator("global:add_liquidity"):             true,
+		calculateDiscriminator("global:add_liquidity_by_weight"):   true,
+		calculateDiscriminator("global:add_liquidity_by_strategy"): true,
+		calculateDiscriminator("global:increase_liquidity"):        true,
+		calculateDiscriminator("global:increase_liquidity_v2"):     true,
+		calculateDiscriminator("global:deposit"):                   true,
+		calculateDiscriminator("global:initialize"):                true,
+	}
+)
 
 func NewTransactionParser(tx *rpc.GetTransactionResult) (*Parser, error) {
 	txInfo, err := tx.Transaction.GetTransaction()
@@ -66,12 +111,17 @@ func NewTransactionParserFromTransaction(tx *solana.Transaction, txMeta *rpc.Tra
 		return nil, fmt.Errorf("failed to extract SPL decimals: %w", err)
 	}
 
+	if err := parser.extractAccountPostBalance(); err != nil {
+		return nil, fmt.Errorf("failed to extract SPL decimals: %w", err)
+	}
+
 	return parser, nil
 }
 
 type SwapData struct {
 	Type SwapType
 	Data interface{}
+	Tx   *TxInfo
 }
 
 func (p *Parser) ParseTransaction() ([]SwapData, error) {
@@ -144,9 +194,13 @@ type SwapInfo struct {
 	TokenOutDecimals uint8
 }
 
-func (p *Parser) ProcessSwapData(swapDatas []SwapData) (*SwapInfo, error) {
+func (p *Parser) ProcessSwapData(swapDatas []SwapData) (*SwapInfo, *TxInfo, error) {
 	if len(swapDatas) == 0 {
-		return nil, fmt.Errorf("no swap data provided")
+		return nil, nil, fmt.Errorf("no swap data provided")
+	}
+	var tx *TxInfo
+	if len(swapDatas) == 1 && swapDatas[0].Tx != nil {
+		tx = swapDatas[0].Tx
 	}
 
 	swapInfo := &SwapInfo{
@@ -177,7 +231,7 @@ func (p *Parser) ProcessSwapData(swapDatas []SwapData) (*SwapInfo, error) {
 	if len(jupiterSwaps) > 0 {
 		jupiterInfo, err := parseJupiterEvents(jupiterSwaps)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse Jupiter events: %w", err)
+			return nil, tx, fmt.Errorf("failed to parse Jupiter events: %w", err)
 		}
 
 		swapInfo.TokenInMint = jupiterInfo.TokenInMint
@@ -188,7 +242,7 @@ func (p *Parser) ProcessSwapData(swapDatas []SwapData) (*SwapInfo, error) {
 		swapInfo.TokenOutDecimals = jupiterInfo.TokenOutDecimals
 		swapInfo.AMMs = jupiterInfo.AMMs
 
-		return swapInfo, nil
+		return swapInfo, tx, nil
 	}
 
 	if len(pumpfunSwaps) > 0 {
@@ -211,7 +265,7 @@ func (p *Parser) ProcessSwapData(swapDatas []SwapData) (*SwapInfo, error) {
 			}
 			swapInfo.AMMs = append(swapInfo.AMMs, string(pumpfunSwaps[0].Type))
 			swapInfo.Timestamp = time.Unix(int64(data.Timestamp), 0)
-			return swapInfo, nil
+			return swapInfo, tx, nil
 		default:
 			otherSwaps = append(otherSwaps, pumpfunSwaps...)
 		}
@@ -271,11 +325,12 @@ func (p *Parser) ProcessSwapData(swapDatas []SwapData) (*SwapInfo, error) {
 			}
 
 			swapInfo.Timestamp = time.Now()
-			return swapInfo, nil
+
+			return swapInfo, tx, nil
 		}
 	}
 
-	return nil, fmt.Errorf("no valid swaps found")
+	return nil, nil, fmt.Errorf("no valid swaps found")
 }
 
 func getTransferFromSwapData(swapData SwapData) *TokenTransfer {
@@ -371,4 +426,436 @@ func (p *Parser) getInnerInstructions(index int) []solana.CompiledInstruction {
 	}
 
 	return nil
+}
+
+type TxInfo struct {
+	Type               string
+	Amm                solana.PublicKey
+	InputMint          solana.PublicKey
+	InputAmount        uint64
+	InputMintDecimals  uint8
+	OutputMint         solana.PublicKey
+	OutputAmount       uint64
+	OutputMintDecimals uint8
+	Pool               solana.PublicKey
+	PoolIn             solana.PublicKey
+	PoolOut            solana.PublicKey
+	PoolInAmount       *big.Int
+	PoolOutAmount      *big.Int
+	Owner              solana.PublicKey
+	Router             solana.PublicKey
+	Index              uint
+	Protocol           string
+}
+
+func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction solana.CompiledInstruction) (err error) {
+	var discriminatorLen = 8
+	var discriminatorWhiteList [][]byte
+	var poolAccountIndex, poolInAccountIndex, poolOutAccountIndex uint16
+	var protocol string
+	pid := progID.String()
+	tx.Type = TxTypeSwap
+	switch {
+	case progID.Equals(RAYDIUM_V4_PROGRAM_ID):
+		poolAccountIndex = 1
+		poolInAccountIndex = 4
+		poolOutAccountIndex = 5
+		//fromAccountIndex = 16
+		//toAccountIndex = 2
+		if len(instruction.Accounts) == 18 {
+			poolInAccountIndex = 5
+			poolOutAccountIndex = 6
+			//fromAccountIndex = 17
+			//toAccountIndex = 2
+		}
+		protocol = string(RAYDIUM)
+		discriminatorLen = 1
+		discriminatorWhiteList = [][]byte{
+			{1},  // add
+			{3},  // add
+			{4},  // remove
+			{9},  // swap
+			{11}, // swap
+		}
+		if len(instruction.Data) > 0 {
+			if instruction.Data[0] == 1 {
+				tx.Type = TxTypeAdd
+				poolAccountIndex = 4
+				poolInAccountIndex = 10
+				poolOutAccountIndex = 11
+			} else if instruction.Data[0] == 3 {
+				tx.Type = TxTypeAdd
+				poolAccountIndex = 1
+				poolInAccountIndex = 6
+				poolOutAccountIndex = 7
+			} else if instruction.Data[0] == 4 {
+				tx.Type = TxTypeRemove
+				poolAccountIndex = 1
+				poolInAccountIndex = 6
+				poolOutAccountIndex = 7
+			}
+		}
+	case progID.Equals(ORCA_PROGRAM_ID):
+		poolAccountIndex = 2
+		poolInAccountIndex = 4
+		poolOutAccountIndex = 6
+		//fromAccountIndex = 1
+		//toAccountIndex = 2
+		protocol = string(ORCA)
+		if len(instruction.Data) >= discriminatorLen {
+			if _, ok := removeDiscriminator[string(instruction.Data[:discriminatorLen])]; ok {
+				tx.Type = TxTypeRemove
+				poolAccountIndex = 0
+				poolInAccountIndex = uint16(len(instruction.Accounts)) - 4
+				poolOutAccountIndex = uint16(len(instruction.Accounts)) - 3
+			} else if _, ok := addDiscriminator[string(instruction.Data[:discriminatorLen])]; ok {
+				tx.Type = TxTypeAdd
+				poolAccountIndex = 0
+				poolInAccountIndex = uint16(len(instruction.Accounts)) - 4
+				poolOutAccountIndex = uint16(len(instruction.Accounts)) - 3
+			}
+		}
+	case progID.Equals(RAYDIUM_CPMM_PROGRAM_ID):
+		poolAccountIndex = 3
+		poolInAccountIndex = 6
+		poolOutAccountIndex = 7
+		//fromAccountIndex = 0
+		//toAccountIndex = 1
+		protocol = string(RAYDIUM)
+		if len(instruction.Data) >= discriminatorLen {
+			if _, ok := removeDiscriminator[string(instruction.Data[:discriminatorLen])]; ok {
+				tx.Type = TxTypeRemove
+				poolAccountIndex = 2
+				poolInAccountIndex = 6
+				poolOutAccountIndex = 7
+			} else if _, ok := addDiscriminator[string(instruction.Data[:discriminatorLen])]; ok {
+				tx.Type = TxTypeAdd
+				poolAccountIndex = 2
+				poolInAccountIndex = 6
+				poolOutAccountIndex = 7
+				if string(instruction.Data[:discriminatorLen]) == calculateDiscriminator("global:initialize") {
+					poolAccountIndex = 3
+					poolInAccountIndex = 10
+					poolOutAccountIndex = 11
+				}
+			}
+		}
+	case progID.Equals(RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID):
+		poolAccountIndex = 2
+		poolInAccountIndex = 5
+		poolOutAccountIndex = 6
+		//fromAccountIndex = 0
+		//toAccountIndex = 2
+		protocol = string(RAYDIUM)
+		if len(instruction.Data) >= discriminatorLen {
+			if _, ok := removeDiscriminator[string(instruction.Data[:discriminatorLen])]; ok {
+				tx.Type = TxTypeRemove
+				poolAccountIndex = 3
+				poolInAccountIndex = 5
+				poolOutAccountIndex = 6
+			} else if _, ok := addDiscriminator[string(instruction.Data[:discriminatorLen])]; ok {
+				tx.Type = TxTypeAdd
+				poolAccountIndex = 2
+				poolInAccountIndex = 9
+				poolOutAccountIndex = 10
+			}
+		}
+	case progID.Equals(METEORA_PROGRAM_ID):
+		poolAccountIndex = 0
+		poolInAccountIndex = 2
+		poolOutAccountIndex = 3
+		//fromAccountIndex = 0
+		//toAccountIndex = 10
+		protocol = string(METEORA)
+		if len(instruction.Data) >= discriminatorLen {
+			liquidity := false
+			if _, ok := removeDiscriminator[string(instruction.Data[:discriminatorLen])]; ok {
+				tx.Type = TxTypeRemove
+				poolAccountIndex = 1
+				poolInAccountIndex = 5
+				poolOutAccountIndex = 6
+				liquidity = true
+			} else if _, ok := addDiscriminator[string(instruction.Data[:discriminatorLen])]; ok {
+				tx.Type = TxTypeAdd
+				poolAccountIndex = 1
+				poolInAccountIndex = 5
+				poolOutAccountIndex = 6
+				liquidity = true
+			}
+			if liquidity && tx.OutputAmount == 0 {
+				if tx.InputMint.Equals(p.allAccountKeys[instruction.Accounts[7]]) {
+					tx.OutputMint = p.allAccountKeys[instruction.Accounts[8]]
+					tx.OutputMintDecimals = p.splTokenInfoMap[p.allAccountKeys[instruction.Accounts[6]].String()].Decimals
+				} else {
+					tx.OutputMint = p.allAccountKeys[instruction.Accounts[7]]
+					tx.OutputMintDecimals = p.splTokenInfoMap[p.allAccountKeys[instruction.Accounts[5]].String()].Decimals
+				}
+			}
+		}
+	case pid == "swapFpHZwjELNnjvThjajtiVmkz3yPQEHjLtka2fwHW":
+		poolAccountIndex = 6
+		poolInAccountIndex = 3
+		poolOutAccountIndex = 4
+		if len(instruction.Accounts) == 15 {
+			poolAccountIndex = 8
+			poolInAccountIndex = 5
+			poolOutAccountIndex = 6
+		}
+		protocol = "StableWeighted"
+	case pid == "SoLFiHG9TfgtdUXUjWAxi3LtvYuFyDLVhBWxdMZxyCe":
+		poolAccountIndex = 1
+		poolInAccountIndex = 2
+		poolOutAccountIndex = 3
+		protocol = "SolFi"
+		discriminatorLen = 1
+		discriminatorWhiteList = [][]byte{
+			{7},
+		}
+	case pid == "2wT8Yq49kHgDzXuPxZSaeLaH1qbmGXtEyPy64bL7aD3c":
+		poolAccountIndex = 1
+		poolInAccountIndex = 5
+		poolOutAccountIndex = 6
+		protocol = "Lifinity Swap V2"
+	case pid == "9W959DqEETiGZocYWCQPaJ6sBmUzgfxXfqGeTEdp3aQP":
+		poolAccountIndex = 0
+		poolInAccountIndex = 4
+		poolOutAccountIndex = 5
+		protocol = "Orca Token Swap V2"
+		discriminatorLen = 1
+		discriminatorWhiteList = [][]byte{
+			{1},
+		}
+	case progID.Equals(METEORA_PROGRAM_ID):
+		poolAccountIndex = 0
+		poolInAccountIndex = 5
+		poolOutAccountIndex = 6
+		protocol = "Meteora Pools Program"
+	case pid == "swapNyd8XiQwJ6ianp9snpu4brUqFxadzvHebnAXjJZ":
+		poolAccountIndex = 6
+		poolInAccountIndex = 3
+		poolOutAccountIndex = 4
+		if len(instruction.Accounts) == 15 {
+			poolAccountIndex = 8
+			poolInAccountIndex = 5
+			poolOutAccountIndex = 6
+		}
+		protocol = "stabble Stable Swap"
+	case progID.Equals(PHOENIX_PROGRAM_ID):
+		poolAccountIndex = 2
+		poolInAccountIndex = 6
+		poolOutAccountIndex = 7
+		protocol = "Phoenix"
+		discriminatorLen = 1
+		discriminatorWhiteList = [][]byte{
+			{0},
+		}
+	case pid == "DEXYosS6oEGvk8uCDayvwEZz4qEyDJRf9nFgYCaqPMTm":
+		poolAccountIndex = 2
+		poolInAccountIndex = 3
+		poolOutAccountIndex = 4
+		protocol = "1Dex"
+	case pid == "H8W3ctz92svYg6mkn1UtGfu2aQr2fnUFHM1RhScEtQDt":
+		poolAccountIndex = 2
+		poolInAccountIndex = 4
+		poolOutAccountIndex = 6
+		protocol = "Cropper"
+	case pid == "HyaB3W9q6XdA5xwpU4XnSZV94htfmbmqJXZcEbRaJutt":
+		poolAccountIndex = 1
+		poolInAccountIndex = 5
+		poolOutAccountIndex = 6
+		protocol = "Invariant"
+	case pid == "SSwpkEEcbUqx4vtoEByFjSkhKdCT862DNVb52nZg1UZ":
+		poolAccountIndex = 0
+		poolInAccountIndex = 4
+		poolOutAccountIndex = 5
+		protocol = "Saber Stable Swap"
+		discriminatorLen = 1
+		discriminatorWhiteList = [][]byte{
+			{1},
+		}
+	case pid == "SSwapUtytfBdBn1b9NUGG6foMVPtcWgpRU32HToDUZr":
+		poolAccountIndex = 0
+		poolInAccountIndex = 4
+		poolOutAccountIndex = 5
+		protocol = "Saros"
+		discriminatorLen = 1
+		discriminatorWhiteList = [][]byte{
+			{1},
+		}
+	case pid == "FLUXubRmkEi2q6K3Y9kBPg9248ggaZVsoSFhtJHSrm1X":
+		poolAccountIndex = 0
+		poolInAccountIndex = 4
+		poolOutAccountIndex = 5
+		protocol = "Fluxbeam"
+		discriminatorLen = 1
+		discriminatorWhiteList = [][]byte{
+			{1},
+		}
+	case pid == "Gswppe6ERWKpUTXvRPfXdzHhiCyJvLadVvXGfdpBqcE1":
+		poolAccountIndex = 1
+		poolInAccountIndex = 4
+		poolOutAccountIndex = 5
+		protocol = "Guac"
+	case pid == "BSwp6bEBihVLdqJRKGgzjcGLHkcTuzmSo1TQkHepzH8p":
+		poolAccountIndex = 1
+		poolInAccountIndex = 4
+		poolOutAccountIndex = 5
+		protocol = "BonkSwap"
+	case pid == "DSwpgjMvXhtGn6BsbqmacdBZyfLj6jSWf3HJpdJtmg6N":
+		poolAccountIndex = 0
+		poolInAccountIndex = 4
+		poolOutAccountIndex = 5
+		protocol = "DexlabSwap"
+		discriminatorLen = 1
+		discriminatorWhiteList = [][]byte{
+			{1},
+		}
+	case pid == "CURVGoZn8zycx6FXwwevgBTB2gVvdbGTEpvMJDbgs2t4":
+		poolAccountIndex = 0
+		poolInAccountIndex = 3
+		poolOutAccountIndex = 4
+		protocol = "Aldrin"
+	case pid == "AMM55ShdkoGRB5jVYPjWziwk8m5MpwyDgsMWHaMSQWH6":
+		poolAccountIndex = 0
+		poolInAccountIndex = 3
+		poolOutAccountIndex = 4
+		protocol = "Aldrin"
+	case pid == "DjVE6JNiYqPL2QXyCUUh8rNjHrbz9hXHNYt99MQ59qw1":
+		poolAccountIndex = 0
+		poolInAccountIndex = 4
+		poolOutAccountIndex = 5
+		protocol = "Orca Token Swap"
+		discriminatorLen = 1
+		discriminatorWhiteList = [][]byte{
+			{1},
+		}
+	case pid == "SwaPpA9LAaLfeLi3a68M4DjnLqgtticKg6CnyNwgAC8":
+		poolAccountIndex = 0
+		poolInAccountIndex = 4
+		poolOutAccountIndex = 5
+		protocol = "Swap Program"
+		discriminatorLen = 1
+		discriminatorWhiteList = [][]byte{
+			{1},
+		}
+	case pid == "5jnapfrAN47UYkLkEf7HnprPPBCQLvkYWGZDeKkaP5hv":
+		poolAccountIndex = 4
+		poolInAccountIndex = 7
+		poolOutAccountIndex = 8
+		protocol = "DaoFun"
+	case pid == "CLMM9tUoggJu2wagPkkqs9eFG4BWhVBZWkP1qv3Sp7tR":
+		poolAccountIndex = 1
+		poolInAccountIndex = 6
+		poolOutAccountIndex = 7
+		protocol = "Crema Finance Program"
+	case pid == "Dooar9JkhdZ7J3LHN3A7YCuoGRUggXhQaG4kijfLGU2j":
+		poolAccountIndex = 0
+		poolInAccountIndex = 4
+		poolOutAccountIndex = 5
+		protocol = "StepN DOOAR Swap"
+		discriminatorLen = 1
+		discriminatorWhiteList = [][]byte{
+			{1},
+		}
+	case pid == "treaf4wWBBty3fHdyBpo35Mz84M8k3heKXmjmi9vFt5":
+		poolAccountIndex = 0
+		poolInAccountIndex = 3
+		poolOutAccountIndex = 4
+		protocol = "Helium Treasury Management"
+	case pid == "PSwapMdSai8tjrEXcxFeQth87xC4rRsa4VA5mhGhXkP":
+		poolAccountIndex = 0
+		poolInAccountIndex = 4
+		poolOutAccountIndex = 5
+		protocol = "Penguin Finance"
+		discriminatorLen = 1
+		discriminatorWhiteList = [][]byte{
+			{1},
+		}
+	case progID.Equals(PUMPFUN_AMM_PROGRAM_ID):
+		poolAccountIndex = 0
+		poolInAccountIndex = 7
+		poolOutAccountIndex = 8
+		protocol = string(PUMP_FUN)
+	default:
+		err = errors.New("unknown progID")
+		log.Println("unknown progID", p.txInfo.Signatures, progID)
+		return
+	}
+
+	if len(instruction.Data) < discriminatorLen {
+		err = errors.New("invalid instruction data length")
+		return
+	}
+
+	discriminator := hex.EncodeToString(instruction.Data[:discriminatorLen])
+	var m map[string]bool
+	if len(discriminatorWhiteList) > 0 {
+		m = map[string]bool{}
+		for _, d := range discriminatorWhiteList {
+			m[hex.EncodeToString(d)] = true
+		}
+	} else {
+		m = swapDiscriminator
+	}
+	if _, ok := m[discriminator]; ok {
+	} else if _, ok := removeDiscriminator[discriminator]; ok {
+	} else if _, ok := addDiscriminator[discriminator]; ok {
+	} else {
+		err = errors.New("discriminator unmatched")
+		log.Println(err, p.txInfo.Signatures, progID, hex.EncodeToString(instruction.Data), discriminator)
+		return
+	}
+
+	accLen := len(instruction.Accounts)
+	if accLen < int(poolAccountIndex) || accLen <= int(poolOutAccountIndex) || accLen < int(poolInAccountIndex) {
+		err = fmt.Errorf("account index out of range %d/%d-%d-%d", len(instruction.Accounts), poolAccountIndex, poolInAccountIndex, poolOutAccountIndex)
+		return
+	}
+
+	poolInAccountIndex = instruction.Accounts[poolInAccountIndex]
+	poolOutAccountIndex = instruction.Accounts[poolOutAccountIndex]
+
+	poolInBalance, ok := p.postBalance[poolInAccountIndex]
+	if !ok {
+		err = errors.New("no postBalance for account")
+		return
+	}
+	poolOutBalance, ok := p.postBalance[poolOutAccountIndex]
+	if !ok {
+		err = errors.New("no postBalance for account")
+		return
+	}
+
+	if poolInBalance.Mint.Equals(tx.OutputMint) {
+		poolInAccountIndex, poolOutAccountIndex = poolOutAccountIndex, poolInAccountIndex
+		poolInBalance, poolOutBalance = poolOutBalance, poolInBalance
+	}
+	if !poolInBalance.Mint.Equals(tx.InputMint) {
+		err = errors.New("no inputMint for account")
+		return
+	}
+	if !poolOutBalance.Mint.Equals(tx.OutputMint) {
+		err = errors.New("no outputMint for account")
+		return
+	}
+
+	tx.Pool = p.allAccountKeys[instruction.Accounts[poolAccountIndex]]
+	tx.PoolIn = p.allAccountKeys[poolInAccountIndex]
+	tx.PoolOut = p.allAccountKeys[poolOutAccountIndex]
+
+	if a, err := decimal.NewFromString(poolInBalance.UiTokenAmount.Amount); err == nil {
+		tx.PoolInAmount = a.BigInt()
+	}
+
+	if a, err := decimal.NewFromString(poolOutBalance.UiTokenAmount.Amount); err == nil {
+		tx.PoolOutAmount = a.BigInt()
+	}
+
+	tx.Protocol = protocol
+	return
+}
+
+func calculateDiscriminator(instructionName string) string {
+	hash := sha256.Sum256([]byte(instructionName))
+	return hex.EncodeToString(hash[:8])
 }
