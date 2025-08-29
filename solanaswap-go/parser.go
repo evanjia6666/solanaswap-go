@@ -807,6 +807,15 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 		discriminatorWhiteList = [][]byte{
 			{149, 59, 131, 119, 245, 228, 249, 17},
 		}
+	case progID.Equals(TESSERA_V_PROGRAM_ID):
+		poolAccountIndex = 1
+		poolInAccountIndex = 4
+		poolOutAccountIndex = 5
+		protocol = "Tessera V"
+		discriminatorLen = 1
+		discriminatorWhiteList = [][]byte{
+			{16},
+		}
 	default:
 		err = errors.New("unknown progID")
 		log.Println("unknown progID", p.txInfo.Signatures, progID)

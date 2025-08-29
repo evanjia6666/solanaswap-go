@@ -28,6 +28,7 @@ var (
 	ZEROFI                                    = solana.MustPublicKeyFromBase58("ZERor4xhbUycZ6gb9ntrhqscUcZmAbQDjEAtCf4hbZY")
 	PANCAKE_SWAP_PROGRAM_ID                   = solana.MustPublicKeyFromBase58("HpNfyc2Saw7RKkQd8nEL4khUcuPhQ7WwY1B2qjx8jxFq")
 	HUMIDIDI_PROGRAM_ID                       = solana.MustPublicKeyFromBase58("9H6tua7jkLhdm3w8BvgpTn5LZNU7g4ZynDmCiNN3q6Rp")
+	TESSERA_V_PROGRAM_ID                      = solana.MustPublicKeyFromBase58("TessVdML9pBGgG9yGks7o4HewRaXVAMuoVj4x83GLQH") // TODO
 
 	MOONSHOT_PROGRAM_ID       = solana.MustPublicKeyFromBase58("MoonCVVNZFSYkqNXP6bxHLPL6QQJiMagDL3qcqUQTrG")
 	ORCA_PROGRAM_ID           = solana.MustPublicKeyFromBase58("whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc")
