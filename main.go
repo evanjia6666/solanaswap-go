@@ -52,7 +52,7 @@ func main() {
 		log.Fatalf("error getting tx: %s", err)
 	}
 
-	parser, err := solanaswapgo.NewTransactionParser(tx)
+	parser, err := solanaswapgo.NewParser(tx)
 	if err != nil {
 		log.Fatalf("error creating parser: %s", err)
 	}

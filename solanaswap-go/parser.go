@@ -77,7 +77,11 @@ var (
 	}
 )
 
-func NewTransactionParser(tx *rpc.GetTransactionResult) (*Parser, error) {
+func NewTransactionParser(tx *solana.Transaction, txMeta *rpc.TransactionMeta) (*Parser, error) {
+	return NewTransactionParserFromTransaction(tx, txMeta)
+}
+
+func NewParser(tx *rpc.GetTransactionResult) (*Parser, error) {
 	txInfo, err := tx.Transaction.GetTransaction()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get transaction: %w", err)
