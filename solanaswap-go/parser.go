@@ -135,7 +135,7 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 	for i, outerInstruction := range p.txInfo.Message.Instructions {
 		progID := p.allAccountKeys[outerInstruction.ProgramIDIndex]
 		switch {
-		case progID.Equals(JUPITER_PROGRAM_ID):
+		case progID.Equals(JUPITER_PROGRAM_ID) || progID.Equals(DFLOW_AGGREGATOR_V4):
 			skip = true
 			parsedSwaps = append(parsedSwaps, p.processJupiterSwaps(i)...)
 		case progID.Equals(MOONSHOT_PROGRAM_ID):

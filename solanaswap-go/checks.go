@@ -69,7 +69,7 @@ func (p *Parser) isPumpFunTradeEventInstruction(inst solana.CompiledInstruction)
 }
 
 func (p *Parser) isJupiterRouteEventInstruction(inst solana.CompiledInstruction) bool {
-	if !p.allAccountKeys[inst.ProgramIDIndex].Equals(JUPITER_PROGRAM_ID) || len(inst.Data) < 16 {
+	if (!p.allAccountKeys[inst.ProgramIDIndex].Equals(JUPITER_PROGRAM_ID) && !p.allAccountKeys[inst.ProgramIDIndex].Equals(DFLOW_AGGREGATOR_V4)) || len(inst.Data) < 16 {
 		return false
 	}
 	decodedBytes, err := base58.Decode(inst.Data.String())

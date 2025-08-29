@@ -208,7 +208,7 @@ func (p *Parser) parseJupiterTxInfo(eventData *JupiterSwapEventData, instr rpc.I
 			continue
 		}
 		tx.Owner = *p.txInfo.Message.Signers().Last()
-		tx.Router = JUPITER_PROGRAM_ID
+		tx.Router = p.allAccountKeys[p.txInfo.Message.Instructions[instr.Index].ProgramIDIndex]
 		tx.Index = uint(instr.Index*256) + uint(n)
 		return tx
 	}
