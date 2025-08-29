@@ -794,6 +794,11 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 		discriminatorWhiteList = [][]byte{
 			{6},
 		}
+	case progID.Equals(PANCAKE_SWAP_PROGRAM_ID):
+		poolAccountIndex = 2
+		poolInAccountIndex = 5
+		poolOutAccountIndex = 6
+		protocol = "PancakeSwap"
 	default:
 		err = errors.New("unknown progID")
 		log.Println("unknown progID", p.txInfo.Signatures, progID)

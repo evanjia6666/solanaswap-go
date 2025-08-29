@@ -26,6 +26,7 @@ var (
 	METEORA_DLMM_PROGRAM_ID                   = solana.MustPublicKeyFromBase58("King7ki4SKMBPb3iupnQwTyjsq294jaXsgLmJo8cb7T")
 	METEORA_DAMM_V2                           = solana.MustPublicKeyFromBase58("cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG")
 	ZEROFI                                    = solana.MustPublicKeyFromBase58("ZERor4xhbUycZ6gb9ntrhqscUcZmAbQDjEAtCf4hbZY")
+	PANCAKE_SWAP_PROGRAM_ID                   = solana.MustPublicKeyFromBase58("HpNfyc2Saw7RKkQd8nEL4khUcuPhQ7WwY1B2qjx8jxFq")
 
 	MOONSHOT_PROGRAM_ID       = solana.MustPublicKeyFromBase58("MoonCVVNZFSYkqNXP6bxHLPL6QQJiMagDL3qcqUQTrG")
 	ORCA_PROGRAM_ID           = solana.MustPublicKeyFromBase58("whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc")
