@@ -799,6 +799,14 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 		poolInAccountIndex = 5
 		poolOutAccountIndex = 6
 		protocol = "PancakeSwap"
+	case progID.Equals(HUMIDIDI_PROGRAM_ID):
+		poolAccountIndex = 1
+		poolInAccountIndex = 2
+		poolOutAccountIndex = 3
+		protocol = "HumiDiFi"
+		discriminatorWhiteList = [][]byte{
+			{149, 59, 131, 119, 245, 228, 249, 17},
+		}
 	default:
 		err = errors.New("unknown progID")
 		log.Println("unknown progID", p.txInfo.Signatures, progID)

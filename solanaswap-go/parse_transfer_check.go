@@ -35,12 +35,12 @@ func (p *Parser) processMeteoraSwaps(progID solana.PublicKey, instructionIndex i
 				case p.isTransferCheck(p.convertRPCToSolanaInstruction(innerInstruction)):
 					transfer := p.processTransferCheck(p.convertRPCToSolanaInstruction(innerInstruction))
 					if transfer != nil {
-						swaps = append(swaps, SwapData{Type: METEORA, Data: transfer})
+						innerSwaps = append(innerSwaps, SwapData{Type: METEORA, Data: transfer})
 					}
 				case p.isTransfer(p.convertRPCToSolanaInstruction(innerInstruction)):
 					transfer := p.processTransfer(p.convertRPCToSolanaInstruction(innerInstruction))
 					if transfer != nil {
-						swaps = append(swaps, SwapData{Type: METEORA, Data: transfer})
+						innerSwaps = append(innerSwaps, SwapData{Type: METEORA, Data: transfer})
 					}
 				}
 			}

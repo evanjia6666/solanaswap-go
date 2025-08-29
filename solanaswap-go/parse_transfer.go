@@ -78,12 +78,12 @@ func (p *Parser) processRaydSwaps(progId solana.PublicKey, instructionIndex int,
 				case p.isTransfer(p.convertRPCToSolanaInstruction(innerInstruction)):
 					transfer := p.processTransfer(p.convertRPCToSolanaInstruction(innerInstruction))
 					if transfer != nil {
-						swaps = append(swaps, SwapData{Type: RAYDIUM, Data: transfer})
+						innerSwaps = append(innerSwaps, SwapData{Type: RAYDIUM, Data: transfer})
 					}
 				case p.isTransferCheck(p.convertRPCToSolanaInstruction(innerInstruction)):
 					transfer := p.processTransferCheck(p.convertRPCToSolanaInstruction(innerInstruction))
 					if transfer != nil {
-						swaps = append(swaps, SwapData{Type: RAYDIUM, Data: transfer})
+						innerSwaps = append(innerSwaps, SwapData{Type: RAYDIUM, Data: transfer})
 					}
 				}
 			}
