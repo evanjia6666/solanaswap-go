@@ -25,10 +25,11 @@ type TransferCheck struct {
 	Type string `json:"type"`
 }
 
-func (p *Parser) processMeteoraSwaps(instructionIndex int) []SwapData {
+func (p *Parser) processMeteoraSwaps(progID solana.PublicKey, instructionIndex int) []SwapData {
 	var swaps []SwapData
 	for _, innerInstructionSet := range p.txMeta.InnerInstructions {
 		if innerInstructionSet.Index == uint16(instructionIndex) {
+			var innerSwaps []SwapData
 			for _, innerInstruction := range innerInstructionSet.Instructions {
 				switch {
 				case p.isTransferCheck(p.convertRPCToSolanaInstruction(innerInstruction)):
@@ -42,6 +43,10 @@ func (p *Parser) processMeteoraSwaps(instructionIndex int) []SwapData {
 						swaps = append(swaps, SwapData{Type: METEORA, Data: transfer})
 					}
 				}
+			}
+			tx, err := p.parseTransferTxInfo(progID, instructionIndex, METEORA, innerSwaps)
+			if err == nil {
+				swaps = append(swaps, SwapData{Type: METEORA, Tx: tx})
 			}
 		}
 	}

@@ -167,11 +167,11 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 			progID.Equals(RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID) ||
 			progID.Equals(RAYDIUM_LAUNCHLAB_PROGRAM_ID) ||
 			progID.Equals(solana.MustPublicKeyFromBase58("AP51WLiiqTdbZfgyRMs35PsZpdmLuPDdHYmrB23pEtMU")):
-			parsedSwaps = append(parsedSwaps, p.processRaydSwaps(i)...)
+			parsedSwaps = append(parsedSwaps, p.processRaydSwaps(progID, i, &outerInstruction, false)...)
 		case progID.Equals(ORCA_PROGRAM_ID):
 			parsedSwaps = append(parsedSwaps, p.processOrcaSwaps(i)...)
 		case progID.Equals(METEORA_PROGRAM_ID) || progID.Equals(METEORA_POOLS_PROGRAM_ID) || progID.Equals(METEORA_DLMM_PROGRAM_ID):
-			parsedSwaps = append(parsedSwaps, p.processMeteoraSwaps(i)...)
+			parsedSwaps = append(parsedSwaps, p.processMeteoraSwaps(progID, i)...)
 		case progID.Equals(PUMPFUN_AMM_PROGRAM_ID):
 			parsedSwaps = append(parsedSwaps, p.processPumpfunAMMSwaps(i)...)
 		case progID.Equals(PUMP_FUN_PROGRAM_ID) ||
@@ -378,7 +378,7 @@ func (p *Parser) processRouterSwaps(instructionIndex int) []SwapData {
 			progID.Equals(RAYDIUM_AMM_PROGRAM_ID) ||
 			progID.Equals(RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID)) && !processedProtocols[PROTOCOL_RAYDIUM]:
 			processedProtocols[PROTOCOL_RAYDIUM] = true
-			if raydSwaps := p.processRaydSwaps(instructionIndex); len(raydSwaps) > 0 {
+			if raydSwaps := p.processRaydSwaps(progID, instructionIndex, &inner, true); len(raydSwaps) > 0 {
 				swaps = append(swaps, raydSwaps...)
 			}
 
@@ -392,7 +392,7 @@ func (p *Parser) processRouterSwaps(instructionIndex int) []SwapData {
 			progID.Equals(METEORA_POOLS_PROGRAM_ID) ||
 			progID.Equals(METEORA_DLMM_PROGRAM_ID)) && !processedProtocols[PROTOCOL_METEORA]:
 			processedProtocols[PROTOCOL_METEORA] = true
-			if meteoraSwaps := p.processMeteoraSwaps(instructionIndex); len(meteoraSwaps) > 0 {
+			if meteoraSwaps := p.processMeteoraSwaps(progID, instructionIndex); len(meteoraSwaps) > 0 {
 				swaps = append(swaps, meteoraSwaps...)
 			}
 
@@ -629,7 +629,7 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 		discriminatorWhiteList = [][]byte{
 			{1},
 		}
-	case progID.Equals(METEORA_PROGRAM_ID):
+	case progID.Equals(METEORA_POOLS_PROGRAM_ID):
 		poolAccountIndex = 0
 		poolInAccountIndex = 5
 		poolOutAccountIndex = 6

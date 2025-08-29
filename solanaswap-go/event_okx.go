@@ -96,7 +96,7 @@ func (p *Parser) processOKXRouterSwaps(instructionIndex int) []SwapData {
 			if processedProtocols[RAYDIUM] {
 				continue
 			}
-			if raydSwaps := p.processRaydSwaps(instructionIndex); len(raydSwaps) > 0 {
+			if raydSwaps := p.processRaydSwaps(progID, instructionIndex, &inner, true); len(raydSwaps) > 0 {
 				for _, swap := range raydSwaps {
 					key := getSwapKey(swap)
 					if !seen[key] {
@@ -128,7 +128,7 @@ func (p *Parser) processOKXRouterSwaps(instructionIndex int) []SwapData {
 			if processedProtocols[METEORA] {
 				continue
 			}
-			if meteoraSwaps := p.processMeteoraSwaps(instructionIndex); len(meteoraSwaps) > 0 {
+			if meteoraSwaps := p.processMeteoraSwaps(progID, instructionIndex); len(meteoraSwaps) > 0 {
 				for _, swap := range meteoraSwaps {
 					key := getSwapKey(swap)
 					if !seen[key] {
