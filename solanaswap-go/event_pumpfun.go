@@ -79,15 +79,13 @@ func (p *Parser) processPumpfunAMMSwaps(instructionIndex int) []SwapData {
 						continue
 					}
 					if len(swaps) > 0 {
+						p.setPumpFunSwapTxInfo(tx, instructionIndex)
 						swaps[0].Tx = tx
 					}
 				}
 
 			}
 		}
-	}
-	if len(swaps) > 0 {
-		p.setPumpFunSwapTxInfo(swaps[0].Tx, p.txInfo.Message.Instructions[instructionIndex])
 	}
 	return swaps
 }
@@ -111,9 +109,26 @@ func handlePumpfunTradeEvent(decoder *ag_binary.Decoder) (*PumpfunTradeEvent, er
 	return &trade, nil
 }
 
-func (p *Parser) setPumpFunSwapTxInfo(tx *TxInfo, instr solana.CompiledInstruction) error {
-	if !p.allAccountKeys[instr.ProgramIDIndex].Equals(PUMPFUN_AMM_PROGRAM_ID) {
-		return fmt.Errorf("mismatched program id")
+func (p *Parser) setPumpFunSwapTxInfo(tx *TxInfo, instructIndex int) error {
+	var instr *solana.CompiledInstruction
+	parentInstr := p.txInfo.Message.Instructions[instructIndex]
+	if p.allAccountKeys[parentInstr.ProgramIDIndex].Equals(PUMPFUN_AMM_PROGRAM_ID) {
+		instr = &parentInstr
+	} else {
+		for _, innerInstructionSet := range p.txMeta.InnerInstructions {
+			if innerInstructionSet.Index == uint16(instructIndex) {
+				for _, innerInstruction := range innerInstructionSet.Instructions {
+					if p.allAccountKeys[innerInstruction.ProgramIDIndex].Equals(PUMPFUN_AMM_PROGRAM_ID) {
+						inP := p.convertRPCToSolanaInstruction(innerInstruction)
+						instr = &inP
+						break
+					}
+				}
+			}
+		}
+	}
+	if instr == nil {
+		return fmt.Errorf("no match instruction found")
 	}
 
 	if len(instr.Data) < 8 {
