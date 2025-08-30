@@ -28,18 +28,21 @@ var JupiterRouteEventDiscriminator = [16]byte{228, 69, 165, 46, 81, 203, 154, 29
 
 func (p *Parser) processJupiterSwaps(instructionIndex int) []SwapData {
 	var swaps []SwapData
+
 	for _, innerInstructionSet := range p.txMeta.InnerInstructions {
 		if innerInstructionSet.Index == uint16(instructionIndex) {
-			for _, innerInstruction := range innerInstructionSet.Instructions {
+			last := 0 // 记录上一次 处理到的指令索引
+			for i, innerInstruction := range innerInstructionSet.Instructions {
 				if p.isJupiterRouteEventInstruction(p.convertRPCToSolanaInstruction(innerInstruction)) {
 					eventData, err := p.parseJupiterRouteEventInstruction(p.convertRPCToSolanaInstruction(innerInstruction))
 					if err != nil {
 						p.Log.Errorf("error processing Pumpfun trade event: %s", err)
 					}
 					if eventData != nil {
-						tx := p.parseJupiterTxInfo(eventData, innerInstructionSet)
+						tx := p.parseJupiterTxInfo(eventData, innerInstructionSet, last)
 						swaps = append(swaps, SwapData{Type: JUPITER, Data: eventData, Tx: tx})
 					}
+					last = i
 				}
 			}
 		}
@@ -188,8 +191,12 @@ func parseJupiterEvents(events []SwapData) (*SwapInfo, error) {
 	return swapInfo, nil
 }
 
-func (p *Parser) parseJupiterTxInfo(eventData *JupiterSwapEventData, instr rpc.InnerInstruction) *TxInfo {
+func (p *Parser) parseJupiterTxInfo(eventData *JupiterSwapEventData, instr rpc.InnerInstruction, last int) *TxInfo {
 	for n, instruction := range instr.Instructions {
+		if n < last {
+			continue
+		}
+
 		progID := p.allAccountKeys[instruction.ProgramIDIndex]
 		if !progID.Equals(eventData.Amm) {
 			continue

@@ -13,6 +13,7 @@ var (
 	OKX_COMMISSION_SPL_SWAP2_DISCRIMINATOR = [8]byte{173, 131, 78, 38, 150, 165, 123, 15}
 	OKX_SWAP3_DISCRIMINATOR                = [8]byte{19, 44, 130, 148, 72, 56, 44, 238}
 	OKX_SWAP_V3_DISCRIMINATOR              = [8]byte{240, 224, 38, 33, 176, 31, 241, 175}
+	OKX_SWAP_TOB_V3_DISCRIMINATOR          = [8]byte{14, 191, 44, 246, 142, 225, 224, 157}
 )
 
 func (p *Parser) processOKXSwaps(instructionIndex int) []SwapData {
@@ -60,7 +61,9 @@ func (p *Parser) processOKXSwaps(instructionIndex int) []SwapData {
 	case bytes.Equal(discriminator, OKX_SWAP_V3_DISCRIMINATOR[:]):
 		p.Log.Infof("processing okx swap type: okx_swap_v3 for instruction %d", instructionIndex)
 		return p.processOKXRouterSwaps(instructionIndex)
-
+	case bytes.Equal(discriminator, OKX_SWAP_TOB_V3_DISCRIMINATOR[:]):
+		p.Log.Infof("processing okx swap type: okx_swap_tob_v3 for instruction %d", instructionIndex)
+		return p.processOKXRouterSwaps(instructionIndex)
 	default:
 		p.Log.Warnf("unknown okx swap discriminator %x for instruction %d", discriminator, instructionIndex)
 		swaps := p.processOKXRouterSwaps(instructionIndex)
@@ -158,15 +161,17 @@ func (p *Parser) processOKXRouterSwaps(instructionIndex int) []SwapData {
 			if processedProtocols[PUMP_FUN] {
 				continue
 			}
-			if pumpfunAMMSwaps := p.processPumpfunAMMSwaps(instructionIndex); len(pumpfunAMMSwaps) > 0 {
-				for _, swap := range pumpfunAMMSwaps {
-					key := getSwapKey(swap)
-					if !seen[key] {
-						swaps = append(swaps, swap)
-						seen[key] = true
-					}
-				}
-			}
+			pumpfunAMMSwaps := p.processPumpfunAMMSwaps(instructionIndex, true)
+			swaps = append(swaps, pumpfunAMMSwaps...)
+			//; len(pumpfunAMMSwaps) > 0 {
+			// 	for _, swap := range pumpfunAMMSwaps {
+			// 		key := getSwapKey(swap)
+			// 		if !seen[key] {
+			// 			swaps = append(swaps, swap)
+			// 			seen[key] = true
+			// 		}
+			// 	}
+			// }
 			processedProtocols[PUMP_FUN] = true
 		}
 

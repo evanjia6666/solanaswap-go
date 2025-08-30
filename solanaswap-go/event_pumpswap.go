@@ -182,55 +182,41 @@ type PumpfunAMMSellEvent struct {
 }
 
 // Is
-func (p *Parser) parsePumpfunAMMSwapEvent(instruction solana.CompiledInstruction, router solana.PublicKey, instructionIndex int64, innerIndex int64) (*TxInfo, error) {
+func (p *Parser) parsePumpfunAMMSwapEvent(tx *TxInfo, instruction solana.CompiledInstruction) error {
 	decodedBytes, err := base58.Decode(instruction.Data.String())
 	if err != nil {
-		return nil, fmt.Errorf("error decoding instruction data: %s", err)
+		return fmt.Errorf("error decoding instruction data: %s", err)
 	}
 	decoder := ag_binary.NewBorshDecoder(decodedBytes[16:])
-	var tx *TxInfo
 
 	if bytes.Equal(decodedBytes[:16], PumpFunAMMBuyEventDiscriminator[:]) {
 		buyEvent, err := handlePumpFunAMMBuyEvent(decoder)
 		if err != nil {
-			return nil, fmt.Errorf("error decoding pumpfun amm buy event: %s", err)
+			return fmt.Errorf("error decoding pumpfun amm buy event: %s", err)
 		}
-		tx = &TxInfo{
-			Type:          TxTypeSwap,
-			Router:        router,
-			Amm:           p.allAccountKeys[instruction.ProgramIDIndex],
-			Pool:          buyEvent.Pool,
-			Owner:         buyEvent.User,
-			InputAmount:   buyEvent.QuoteAmountInWithLpFee,
-			OutputAmount:  buyEvent.BaseAmountOut,
-			PoolInAmount:  new(big.Int).SetUint64(buyEvent.PoolQuoteTokenReserves),
-			PoolOutAmount: new(big.Int).SetUint64(buyEvent.PoolBaseTokenReserves),
-			Index:         uint(instructionIndex*256) + uint(innerIndex),
-		}
-		return tx, nil
+
+		tx.InputAmount = buyEvent.QuoteAmountInWithLpFee
+		tx.OutputAmount = buyEvent.BaseAmountOut
+		tx.PoolInAmount = new(big.Int).SetUint64(buyEvent.PoolQuoteTokenReserves)
+		tx.PoolOutAmount = new(big.Int).SetUint64(buyEvent.PoolBaseTokenReserves)
+
+		return nil
 	}
 	if bytes.Equal(decodedBytes[:16], PumpFunAMMSellEventDiscriminator[:]) {
 		sellEvent, err := handlePumpFunAMMSellEvent(decoder)
 		if err != nil {
-			return nil, fmt.Errorf("error decoding pumpfun amm sell event: %s", err)
+			return fmt.Errorf("error decoding pumpfun amm sell event: %s", err)
 		}
-		tx = &TxInfo{
-			Type: TxTypeSwap,
 
-			Amm:           p.allAccountKeys[instruction.ProgramIDIndex],
-			Pool:          sellEvent.Pool,
-			Owner:         sellEvent.User,
-			Router:        router,
-			InputAmount:   sellEvent.BaseAmountIn,
-			OutputAmount:  sellEvent.UserQuoteAmountOut,
-			PoolInAmount:  new(big.Int).SetUint64(sellEvent.PoolBaseTokenReserves),
-			PoolOutAmount: new(big.Int).SetUint64(sellEvent.PoolQuoteTokenReserves),
-			Index:         uint(instructionIndex*256) + uint(innerIndex),
-		}
-		return tx, nil
+		tx.InputAmount = sellEvent.BaseAmountIn
+		tx.OutputAmount = sellEvent.UserQuoteAmountOut
+		tx.PoolInAmount = new(big.Int).SetUint64(sellEvent.PoolBaseTokenReserves)
+		tx.PoolOutAmount = new(big.Int).SetUint64(sellEvent.PoolQuoteTokenReserves)
+
+		return nil
 	}
 
-	return tx, fmt.Errorf("unhandled pumpfun amm swap event type")
+	return fmt.Errorf("unhandled pumpfun amm swap event type")
 }
 
 func handlePumpFunAMMBuyEvent(decoder *ag_binary.Decoder) (*PumpfunAMMBuyEvent, error) {
@@ -247,4 +233,62 @@ func handlePumpFunAMMSellEvent(decoder *ag_binary.Decoder) (*PumpfunAMMSellEvent
 		return nil, err
 	}
 	return &event, nil
+}
+
+func (p *Parser) isPumpFunAMMBuyDiscriminator(instr solana.CompiledInstruction) bool {
+	if !p.allAccountKeys[instr.ProgramIDIndex].Equals(PUMPFUN_AMM_PROGRAM_ID) || len(instr.Data) < 8 {
+		return false
+	}
+	decodedBytes, err := base58.Decode(instr.Data.String())
+	if err != nil {
+		return false
+	}
+	return bytes.Equal(decodedBytes[:8], PumpFunAMMBuyDiscriminator[:])
+}
+
+func (p *Parser) processPumFumAMMBuySwaps(router solana.PublicKey, instruction solana.CompiledInstruction) *TxInfo {
+	tx := &TxInfo{
+		Type:               TxTypeSwap,
+		Amm:                p.allAccountKeys[instruction.ProgramIDIndex],
+		Router:             router,
+		Owner:              *p.txInfo.Message.Signers().Last(),
+		InputMint:          p.allAccountKeys[instruction.Accounts[4]],
+		InputMintDecimals:  p.splTokenInfoMap[p.allAccountKeys[instruction.Accounts[4]].String()].Decimals,
+		OutputMint:         p.allAccountKeys[instruction.Accounts[3]],
+		OutputMintDecimals: p.splTokenInfoMap[p.allAccountKeys[instruction.Accounts[3]].String()].Decimals,
+		Pool:               p.allAccountKeys[instruction.Accounts[0]],
+		PoolIn:             p.allAccountKeys[instruction.Accounts[8]],
+		PoolOut:            p.allAccountKeys[instruction.Accounts[7]],
+		Protocol:           string(PUMP_FUN),
+	}
+	return tx
+}
+
+func (p *Parser) processPumpFunAMMSellSwaps(router solana.PublicKey, instruction solana.CompiledInstruction) *TxInfo {
+	tx := &TxInfo{
+		Type:               TxTypeSwap,
+		Amm:                p.allAccountKeys[instruction.ProgramIDIndex],
+		Router:             router,
+		Owner:              *p.txInfo.Message.Signers().Last(),
+		InputMint:          p.allAccountKeys[instruction.Accounts[3]],
+		InputMintDecimals:  p.splTokenInfoMap[p.allAccountKeys[instruction.Accounts[3]].String()].Decimals,
+		OutputMint:         p.allAccountKeys[instruction.Accounts[4]],
+		OutputMintDecimals: p.splTokenInfoMap[p.allAccountKeys[instruction.Accounts[4]].String()].Decimals,
+		Pool:               p.allAccountKeys[instruction.Accounts[0]],
+		PoolIn:             p.allAccountKeys[instruction.Accounts[7]],
+		PoolOut:            p.allAccountKeys[instruction.Accounts[8]],
+		Protocol:           string(PUMP_FUN),
+	}
+	return tx
+}
+
+func (p *Parser) isPumpFunAMMSellDiscriminator(instr solana.CompiledInstruction) bool {
+	if !p.allAccountKeys[instr.ProgramIDIndex].Equals(PUMPFUN_AMM_PROGRAM_ID) || len(instr.Data) < 8 {
+		return false
+	}
+	decodedBytes, err := base58.Decode(instr.Data.String())
+	if err != nil {
+		return false
+	}
+	return bytes.Equal(decodedBytes[:8], PumpFunAMMSellDiscriminator[:])
 }

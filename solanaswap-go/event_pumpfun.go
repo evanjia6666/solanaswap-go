@@ -54,36 +54,94 @@ func (p *Parser) processPumpfunSwaps(instructionIndex int) []SwapData {
 	return swaps
 }
 
-func (p *Parser) processPumpfunAMMSwaps(instructionIndex int) []SwapData {
-	var swaps []SwapData
-	for _, innerInstructionSet := range p.txMeta.InnerInstructions {
-		if innerInstructionSet.Index == uint16(instructionIndex) {
-			for i, innerInstruction := range innerInstructionSet.Instructions {
-				switch {
-				case p.isTransferCheck(p.convertRPCToSolanaInstruction(innerInstruction)):
-					transfer := p.processTransferCheck(p.convertRPCToSolanaInstruction(innerInstruction))
-					if transfer != nil {
-						swaps = append(swaps, SwapData{Type: PUMP_FUN, Data: transfer})
-					}
-				case p.isTransfer(p.convertRPCToSolanaInstruction(innerInstruction)):
-					transfer := p.processTransfer(p.convertRPCToSolanaInstruction(innerInstruction))
-					if transfer != nil {
-						swaps = append(swaps, SwapData{Type: PUMP_FUN, Data: transfer})
+func (p *Parser) processPumpfunAMMSwaps(PInstructionIndex int, isInner bool) []SwapData {
+	parentInstruction := p.txInfo.Message.Instructions[PInstructionIndex]
+	pProgID := p.allAccountKeys[parentInstruction.ProgramIDIndex]
+
+	if isInner {
+		var innerSwaps []SwapData
+		inners := p.getInnerInstructions(PInstructionIndex)
+		for i, inner := range inners {
+			switch {
+			case p.isPumpFunAMMBuyDiscriminator(inner):
+				// parse pool
+				tx := p.processPumFumAMMBuySwaps(pProgID, inner)
+				tx.Index = uint(PInstructionIndex*256) + uint(i)
+				// parse event
+				for x := i + 1; x < len(inners); x++ {
+					if p.isPumpFunAMMSwapEventInstruction(inners[x]) {
+						err := p.parsePumpfunAMMSwapEvent(tx, inners[x])
+						if err != nil {
+							p.Log.Errorf("error processing Pumpfun amm swap event: %s", err)
+							return nil
+						}
+						if tx != nil {
+							innerSwaps = append(innerSwaps, SwapData{Type: PUMP_FUN, Data: nil, Tx: tx})
+						}
+						break
 					}
 				}
+				// insert event
+			case p.isPumpFunAMMSellDiscriminator(inner):
+				tx := p.processPumpFunAMMSellSwaps(pProgID, inner)
+				tx.Index = uint(PInstructionIndex*256) + uint(i)
+				// parse event
+				for x := i + 1; x < len(inners); x++ {
+					if p.isPumpFunAMMSwapEventInstruction(inners[x]) {
+						err := p.parsePumpfunAMMSwapEvent(tx, inners[x])
+						if err != nil {
+							p.Log.Errorf("error processing Pumpfun amm swap event: %s", err)
+							return nil
+						}
+						if tx != nil {
+							innerSwaps = append(innerSwaps, SwapData{Type: PUMP_FUN, Data: nil, Tx: tx})
+						}
+						break
+					}
+				}
+			}
+
+		}
+		return innerSwaps
+	}
+
+	var swaps []SwapData
+	var tx *TxInfo
+	switch {
+	case p.isPumpFunAMMBuyDiscriminator(parentInstruction):
+		tx = p.processPumFumAMMBuySwaps(pProgID, parentInstruction)
+	case p.isPumpFunAMMSellDiscriminator(parentInstruction):
+		tx = p.processPumpFunAMMSellSwaps(pProgID, parentInstruction)
+	default:
+		return nil
+	}
+	tx.Index = uint(PInstructionIndex * 256)
+
+	for _, innerInstructionSet := range p.txMeta.InnerInstructions {
+		if innerInstructionSet.Index == uint16(PInstructionIndex) {
+
+			for _, innerInstruction := range innerInstructionSet.Instructions {
+				// switch {
+				// case p.isTransferCheck(p.convertRPCToSolanaInstruction(innerInstruction)):
+				// 	transfer := p.processTransferCheck(p.convertRPCToSolanaInstruction(innerInstruction))
+				// 	if transfer != nil {
+				// 		swaps = append(swaps, SwapData{Type: PUMP_FUN, Data: transfer})
+				// 	}
+				// case p.isTransfer(p.convertRPCToSolanaInstruction(innerInstruction)):
+				// 	transfer := p.processTransfer(p.convertRPCToSolanaInstruction(innerInstruction))
+				// 	if transfer != nil {
+				// 		swaps = append(swaps, SwapData{Type: PUMP_FUN, Data: transfer})
+				// 	}
+				// }
 
 				if p.isPumpFunAMMSwapEventInstruction(p.convertRPCToSolanaInstruction(innerInstruction)) {
-					tx, err := p.parsePumpfunAMMSwapEvent(p.convertRPCToSolanaInstruction(innerInstruction), p.allAccountKeys[p.txInfo.Message.Instructions[instructionIndex].ProgramIDIndex], int64(instructionIndex), int64(i))
+					err := p.parsePumpfunAMMSwapEvent(tx, p.convertRPCToSolanaInstruction(innerInstruction))
 					if err != nil {
 						p.Log.Errorf("error processing Pumpfun trade event: %s", err)
-						continue
+						return nil
 					}
-					if len(swaps) > 0 {
-						p.setPumpFunSwapTxInfo(tx, instructionIndex)
-						swaps[0].Tx = tx
-					}
+					swaps = append(swaps, SwapData{Type: PUMP_FUN, Data: nil, Tx: tx})
 				}
-
 			}
 		}
 	}

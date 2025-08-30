@@ -173,7 +173,7 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 		case progID.Equals(METEORA_PROGRAM_ID) || progID.Equals(METEORA_POOLS_PROGRAM_ID) || progID.Equals(METEORA_DLMM_PROGRAM_ID):
 			parsedSwaps = append(parsedSwaps, p.processMeteoraSwaps(progID, i)...)
 		case progID.Equals(PUMPFUN_AMM_PROGRAM_ID):
-			parsedSwaps = append(parsedSwaps, p.processPumpfunAMMSwaps(i)...)
+			parsedSwaps = append(parsedSwaps, p.processPumpfunAMMSwaps(i, false)...)
 		case progID.Equals(PUMP_FUN_PROGRAM_ID) ||
 			progID.Equals(solana.MustPublicKeyFromBase58("BSfD6SHZigAfDWSjzD5Q41jw8LmKwtmjskPH9XW1mrRW")):
 			parsedSwaps = append(parsedSwaps, p.processPumpfunSwaps(i)...)
@@ -398,7 +398,7 @@ func (p *Parser) processRouterSwaps(instructionIndex int) []SwapData {
 
 		case progID.Equals(PUMPFUN_AMM_PROGRAM_ID) && !processedProtocols[PROTOCOL_PUMPFUN]:
 			processedProtocols[PROTOCOL_PUMPFUN] = true
-			if pumpfunAMMSwaps := p.processPumpfunAMMSwaps(instructionIndex); len(pumpfunAMMSwaps) > 0 {
+			if pumpfunAMMSwaps := p.processPumpfunAMMSwaps(instructionIndex, true); len(pumpfunAMMSwaps) > 0 {
 				swaps = append(swaps, pumpfunAMMSwaps...)
 			}
 
@@ -803,9 +803,10 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 		poolAccountIndex = 1
 		poolInAccountIndex = 2
 		poolOutAccountIndex = 3
-		protocol = "HumiDiFi"
+		protocol = "HumidiFi"
 		discriminatorWhiteList = [][]byte{
 			{149, 59, 131, 119, 245, 228, 249, 17},
+			{61, 203, 246, 110, 148, 191, 54, 98},
 		}
 	case progID.Equals(TESSERA_V_PROGRAM_ID):
 		poolAccountIndex = 1
