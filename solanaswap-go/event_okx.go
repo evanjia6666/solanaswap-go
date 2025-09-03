@@ -94,19 +94,19 @@ func (p *Parser) processOKXRouterSwaps(instructionIndex int) []SwapData {
 		switch {
 		case progID.Equals(RAYDIUM_V4_PROGRAM_ID) ||
 			progID.Equals(RAYDIUM_CPMM_PROGRAM_ID) ||
-			progID.Equals(RAYDIUM_AMM_PROGRAM_ID) ||
+			// progID.Equals(RAYDIUM_AMM_ROUTER_PROGRAM_ID) ||
 			progID.Equals(RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID):
 			if processedProtocols[RAYDIUM] {
 				continue
 			}
 			if raydSwaps := p.processRaydSwaps(progID, instructionIndex, &inner, true); len(raydSwaps) > 0 {
-				for _, swap := range raydSwaps {
-					key := getSwapKey(swap)
-					if !seen[key] {
-						swaps = append(swaps, swap)
-						seen[key] = true
-					}
-				}
+				// for _, swap := range raydSwaps {
+				// 	key := getSwapKey(swap)
+				// 	if !seen[key] {
+				swaps = append(swaps, raydSwaps...)
+				// 		seen[key] = true
+				// 	}
+				// }
 				processedProtocols[RAYDIUM] = true
 			}
 

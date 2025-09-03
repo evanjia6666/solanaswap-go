@@ -18,65 +18,6 @@ var (
 	PumpFunAMMBuyDiscriminator  = [8]byte{102, 6, 61, 18, 1, 218, 235, 234}
 )
 
-/*{28 items
-timestamp:
-"1756367596"
-baseAmountOut:
-"675970993982"
-maxQuoteAmountIn:
-"100000000"
-userBaseTokenReserves:
-"0"
-userQuoteTokenReserves:
-"19121288468"
-poolBaseTokenReserves:
-"473967232409269"
-poolQuoteTokenReserves:
-"41103736846"
-quoteAmountIn:
-"58705783"
-lpFeeBasisPoints:
-"20"
-lpFee:
-"117412"
-protocolFeeBasisPoints:
-"5"
-protocolFee:
-"29353"
-quoteAmountInWithLpFee:
-"58823195"
-userQuoteAmountIn:
-"58881901"
-pool:
-"6C6vbZXZdxAkgDKWRFxxzRJ2vMCkfqptyRLWz3C7svMq"
-user:
-"A59dYap98vTZ5icj3JMrqiTsPZHusrVmUsmNv8fG6U7T"
-userBaseTokenAccount:
-"B1QdVzDfTcDm3E3NjTPiyZkkqmYmTqxMbxt4o9r7a6hc"
-userQuoteTokenAccount:
-"4AD8g7vPyr9XRr6hCkP1KBysNk9h73hsepSfcudQPPJv"
-protocolFeeRecipient:
-"7hTckgnGnLQR6sdH7YkqFTAA7VwTfYFaZ6EhEsU3saCX"
-protocolFeeRecipientTokenAccount:
-"X5QPJcpph4mBAJDzc4hRziFftSbcygV59kRb2Fu6Je1"
-coinCreator:
-"8rcz5xq9YUt6ZqmkjhEDZAagvFykpxGUMcbmoXChxptq"
-coinCreatorFeeBasisPoints:
-"5"
-coinCreatorFee:
-"29353"
-trackVolume:
-true
-totalUnclaimedTokens:
-"0"
-totalClaimedTokens:
-"0"
-currentSolVolume:
-"0"
-lastUpdateTimestamp:
-"0"
-}*/
-
 type PumpfunAMMBuyEvent struct {
 	Timestamp                        uint64
 	BaseAmountOut                    uint64
@@ -107,56 +48,6 @@ type PumpfunAMMBuyEvent struct {
 	CurrentSolVolume                 uint64
 	LastUpdateTimestamp              uint64
 }
-
-/*
-{23 items
-timestamp:
-"1745581741"
-baseAmountIn:
-"805492382843"
-minQuoteAmountOut:
-"38973953"
-userBaseTokenReserves:
-"805492382843"
-userQuoteTokenReserves:
-"0"
-poolBaseTokenReserves:
-"489992403515873"
-poolQuoteTokenReserves:
-"39678164444"
-quoteAmountOut:
-"65119389"
-lpFeeBasisPoints:
-"20"
-lpFee:
-"130239"
-protocolFeeBasisPoints:
-"5"
-protocolFee:
-"32560"
-quoteAmountOutWithoutLpFee:
-"64989150"
-userQuoteAmountOut:
-"64956590"
-pool:
-"6iWvjfWom8cBAj8pKeRh4ymQuL6M251FK48C9E6uRa6h"
-user:
-"CPguAH6jQXQYQf7gzjqADdhmqz9yDBbNf2QxwUmgGYtJ"
-userBaseTokenAccount:
-"BY9Jjd8b9cXmMk9iVN3npyEEBB3TQExgvnvwy3i4eV9H"
-userQuoteTokenAccount:
-"6HF6AoZe1MgH4jq7efPzpUaiE7auHDqARcJkgxU5DJNq"
-protocolFeeRecipient:
-"9rPYyANsfQZw3DnDmKE3YCQF5E8oD89UXoHn9JFEhJUz"
-protocolFeeRecipientTokenAccount:
-"Bvtgim23rfocUzxVX9j9QFxTbBnH8JZxnaGLCEkXvjKS"
-coinCreator:
-"11111111111111111111111111111111"
-coinCreatorFeeBasisPoints:
-"0"
-coinCreatorFee:
-"0"
-}*/
 
 type PumpfunAMMSellEvent struct {
 	Timestamp                        uint64

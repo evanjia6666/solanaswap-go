@@ -152,6 +152,9 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 		case progID.Equals(OKX_DEX_ROUTER_PROGRAM_ID):
 			skip = true
 			parsedSwaps = append(parsedSwaps, p.processOKXSwaps(i)...)
+		case progID.Equals(RAYDIUM_AMM_ROUTER_PROGRAM_ID):
+			skip = true
+			parsedSwaps = append(parsedSwaps, p.processRaydSwaps(RAYDIUM_AMM_ROUTER_PROGRAM_ID, i, &outerInstruction, true)...)
 		}
 	}
 	if skip {
@@ -163,7 +166,7 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 		switch {
 		case progID.Equals(RAYDIUM_V4_PROGRAM_ID) ||
 			progID.Equals(RAYDIUM_CPMM_PROGRAM_ID) ||
-			progID.Equals(RAYDIUM_AMM_PROGRAM_ID) ||
+			// progID.Equals(RAYDIUM_AMM_ROUTER_PROGRAM_ID) ||
 			progID.Equals(RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID) ||
 			progID.Equals(RAYDIUM_LAUNCHLAB_PROGRAM_ID) ||
 			progID.Equals(solana.MustPublicKeyFromBase58("AP51WLiiqTdbZfgyRMs35PsZpdmLuPDdHYmrB23pEtMU")):
@@ -375,7 +378,7 @@ func (p *Parser) processRouterSwaps(instructionIndex int) []SwapData {
 		switch {
 		case (progID.Equals(RAYDIUM_V4_PROGRAM_ID) ||
 			progID.Equals(RAYDIUM_CPMM_PROGRAM_ID) ||
-			progID.Equals(RAYDIUM_AMM_PROGRAM_ID) ||
+			// progID.Equals(RAYDIUM_AMM_ROUTER_PROGRAM_ID) ||
 			progID.Equals(RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID)) && !processedProtocols[PROTOCOL_RAYDIUM]:
 			processedProtocols[PROTOCOL_RAYDIUM] = true
 			if raydSwaps := p.processRaydSwaps(progID, instructionIndex, &inner, true); len(raydSwaps) > 0 {
@@ -507,12 +510,12 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 		//toAccountIndex = 2
 		protocol = string(ORCA)
 		if len(instruction.Data) >= discriminatorLen {
-			if _, ok := removeDiscriminator[string(instruction.Data[:discriminatorLen])]; ok {
+			if _, ok := removeDiscriminator[hex.EncodeToString(instruction.Data[:discriminatorLen])]; ok {
 				tx.Type = TxTypeRemove
 				poolAccountIndex = 0
 				poolInAccountIndex = uint16(len(instruction.Accounts)) - 4
 				poolOutAccountIndex = uint16(len(instruction.Accounts)) - 3
-			} else if _, ok := addDiscriminator[string(instruction.Data[:discriminatorLen])]; ok {
+			} else if _, ok := addDiscriminator[hex.EncodeToString(instruction.Data[:discriminatorLen])]; ok {
 				tx.Type = TxTypeAdd
 				poolAccountIndex = 0
 				poolInAccountIndex = uint16(len(instruction.Accounts)) - 4
@@ -527,17 +530,17 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 		//toAccountIndex = 1
 		protocol = string(RAYDIUM)
 		if len(instruction.Data) >= discriminatorLen {
-			if _, ok := removeDiscriminator[string(instruction.Data[:discriminatorLen])]; ok {
+			if _, ok := removeDiscriminator[hex.EncodeToString(instruction.Data[:discriminatorLen])]; ok {
 				tx.Type = TxTypeRemove
 				poolAccountIndex = 2
 				poolInAccountIndex = 6
 				poolOutAccountIndex = 7
-			} else if _, ok := addDiscriminator[string(instruction.Data[:discriminatorLen])]; ok {
+			} else if _, ok := addDiscriminator[hex.EncodeToString(instruction.Data[:discriminatorLen])]; ok {
 				tx.Type = TxTypeAdd
 				poolAccountIndex = 2
 				poolInAccountIndex = 6
 				poolOutAccountIndex = 7
-				if string(instruction.Data[:discriminatorLen]) == calculateDiscriminator("global:initialize") {
+				if hex.EncodeToString(instruction.Data[:discriminatorLen]) == calculateDiscriminator("global:initialize") {
 					poolAccountIndex = 3
 					poolInAccountIndex = 10
 					poolOutAccountIndex = 11
@@ -552,12 +555,12 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 		//toAccountIndex = 2
 		protocol = string(RAYDIUM)
 		if len(instruction.Data) >= discriminatorLen {
-			if _, ok := removeDiscriminator[string(instruction.Data[:discriminatorLen])]; ok {
+			if _, ok := removeDiscriminator[hex.EncodeToString(instruction.Data[:discriminatorLen])]; ok {
 				tx.Type = TxTypeRemove
 				poolAccountIndex = 3
 				poolInAccountIndex = 5
 				poolOutAccountIndex = 6
-			} else if _, ok := addDiscriminator[string(instruction.Data[:discriminatorLen])]; ok {
+			} else if _, ok := addDiscriminator[hex.EncodeToString(instruction.Data[:discriminatorLen])]; ok {
 				tx.Type = TxTypeAdd
 				poolAccountIndex = 2
 				poolInAccountIndex = 9
@@ -573,13 +576,13 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 		protocol = string(METEORA)
 		if len(instruction.Data) >= discriminatorLen {
 			liquidity := false
-			if _, ok := removeDiscriminator[string(instruction.Data[:discriminatorLen])]; ok {
+			if _, ok := removeDiscriminator[hex.EncodeToString(instruction.Data[:discriminatorLen])]; ok {
 				tx.Type = TxTypeRemove
 				poolAccountIndex = 1
 				poolInAccountIndex = 5
 				poolOutAccountIndex = 6
 				liquidity = true
-			} else if _, ok := addDiscriminator[string(instruction.Data[:discriminatorLen])]; ok {
+			} else if _, ok := addDiscriminator[hex.EncodeToString(instruction.Data[:discriminatorLen])]; ok {
 				tx.Type = TxTypeAdd
 				poolAccountIndex = 1
 				poolInAccountIndex = 5

@@ -37,7 +37,7 @@ Example Transactions:
 
 func main() {
 	rpcClient := rpc.New(rpc.MainNetBeta.RPC)
-	txSig := solana.MustSignatureFromBase58("coRFdSoD12sPtXdwuCqn1rbn1bKQEzGE6WaRY7dHGUDRNguzqDpMFhCaNwAdV9uCeVmy24ZddbhzahQ5bovAWqW")
+	txSig := solana.MustSignatureFromBase58("6T9QfA6s9TZ5mvRVb5fVmjy7LzPionXAq2TLY53eQALdETsXQT1xuNRu8JKyTBFJPAo6xMr7J5d78Aq4hCnDt8t")
 
 	var maxTxVersion uint64 = 0
 	tx, err := rpcClient.GetTransaction(
@@ -75,4 +75,12 @@ func main() {
 
 	marshalledTxInfo, _ := json.MarshalIndent(txInfo, "", "  ")
 	fmt.Println(string(marshalledTxInfo))
+	// Found low price tx hash: 3L9qMFskmQkMRhHWZLbz5gaig2ac2GyftR2Y4kWWgvMNZAwJr2anxvQCdoRhNNvDfWsMKHkiUU6MFXA5Tg4PC1nd with price: 189.114720 on page: 8743
+	// 3L9qMFskmQkMRhHWZLbz5gaig2ac2GyftR2Y4kWWgvMNZAwJr2anxvQCdoRhNNvDfWsMKHkiUU6MFXA5Tg4PC1nd <nil>
+	// 5pbed7TDbFNHE8e19tGMhpcAAmU3h4fu2TZxiNqvrmd14LB4wPBiTMGT9KGA1nj9PnSSwS1knpt4MjYwTq5LmuPr
+
+	// 5UP2ttyvvqJZc37RgrZJRSVQk9xkW686mkSyqvwMePCgEFTtvUiiQyNsw8q1NJg1UrkMfGgtv9p3mp4DThniCnrm
+	// 3jpU5gKdcZfTMZoz7eognfTFchQQEtfnBsW6sTEsHMzWnnPtevzPuUtpbcuxVoMYTZjyo32JRf1V229fq7QLktzg
+	// 3fcRNXwinWmo1xjPbb1VFRwmo4T9krwex8j72GtoZGHhekJC8enw6WSvQYUGCmDR7EzgyWFqA2yym1mL6STtEku1
+
 }
