@@ -88,7 +88,7 @@ func (p *Parser) processOKXRouterSwaps(instructionIndex int) []SwapData {
 		return swaps
 	}
 
-	for _, inner := range innerInstructions {
+	for idx, inner := range innerInstructions {
 		progID := p.allAccountKeys[inner.ProgramIDIndex]
 
 		switch {
@@ -127,19 +127,20 @@ func (p *Parser) processOKXRouterSwaps(instructionIndex int) []SwapData {
 
 		case progID.Equals(METEORA_PROGRAM_ID) ||
 			progID.Equals(METEORA_POOLS_PROGRAM_ID) ||
-			progID.Equals(METEORA_DLMM_PROGRAM_ID):
-			if processedProtocols[METEORA] {
-				continue
-			}
-			if meteoraSwaps := p.processMeteoraSwaps(progID, instructionIndex); len(meteoraSwaps) > 0 {
-				for _, swap := range meteoraSwaps {
-					key := getSwapKey(swap)
-					if !seen[key] {
-						swaps = append(swaps, swap)
-						seen[key] = true
-					}
-				}
-				processedProtocols[METEORA] = true
+			progID.Equals(METEORA_DLMM_PROGRAM_ID) ||
+			progID.Equals(METEORA_DAMM_V2):
+			// if processedProtocols[METEORA] {
+			// 	continue
+			// }
+			if meteoraSwaps := p.processMeteoraSwaps(progID, instructionIndex, idx, true); len(meteoraSwaps) > 0 {
+				// for _, swap := range meteoraSwaps {
+				// 	key := getSwapKey(swap)
+				// 	if !seen[key] {
+				swaps = append(swaps, meteoraSwaps...)
+				// 		seen[key] = true
+				// 	}
+				// }
+				// processedProtocols[METEORA] = true
 			}
 
 		case progID.Equals(PUMP_FUN_PROGRAM_ID):

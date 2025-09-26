@@ -145,7 +145,9 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 			progID.Equals(MINTECH_PROGRAM_ID) ||
 			progID.Equals(BLOOM_PROGRAM_ID) ||
 			progID.Equals(NOVA_PROGRAM_ID) ||
-			progID.Equals(MAESTRO_PROGRAM_ID):
+			progID.Equals(MAESTRO_PROGRAM_ID) ||
+			progID.Equals(JUPITER_DCA_PROGRAM_ID) ||
+			progID.Equals(THREE_Q_ROUTER_PROGRAM_ID):
 			if innerSwaps := p.processRouterSwaps(i); len(innerSwaps) > 0 {
 				parsedSwaps = append(parsedSwaps, innerSwaps...)
 			}
@@ -174,7 +176,7 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 		case progID.Equals(ORCA_PROGRAM_ID):
 			parsedSwaps = append(parsedSwaps, p.processOrcaSwaps(i)...)
 		case progID.Equals(METEORA_PROGRAM_ID) || progID.Equals(METEORA_POOLS_PROGRAM_ID) || progID.Equals(METEORA_DLMM_PROGRAM_ID):
-			parsedSwaps = append(parsedSwaps, p.processMeteoraSwaps(progID, i)...)
+			parsedSwaps = append(parsedSwaps, p.processMeteoraSwaps(progID, i, 0, false)...)
 		case progID.Equals(PUMPFUN_AMM_PROGRAM_ID):
 			parsedSwaps = append(parsedSwaps, p.processPumpfunAMMSwaps(i, false)...)
 		case progID.Equals(PUMP_FUN_PROGRAM_ID) ||
@@ -372,7 +374,7 @@ func (p *Parser) processRouterSwaps(instructionIndex int) []SwapData {
 
 	processedProtocols := make(map[string]bool)
 
-	for _, inner := range innerInstructions {
+	for idx, inner := range innerInstructions {
 		progID := p.allAccountKeys[inner.ProgramIDIndex]
 
 		switch {
@@ -395,7 +397,7 @@ func (p *Parser) processRouterSwaps(instructionIndex int) []SwapData {
 			progID.Equals(METEORA_POOLS_PROGRAM_ID) ||
 			progID.Equals(METEORA_DLMM_PROGRAM_ID)) && !processedProtocols[PROTOCOL_METEORA]:
 			processedProtocols[PROTOCOL_METEORA] = true
-			if meteoraSwaps := p.processMeteoraSwaps(progID, instructionIndex); len(meteoraSwaps) > 0 {
+			if meteoraSwaps := p.processMeteoraSwaps(progID, instructionIndex, idx, true); len(meteoraSwaps) > 0 {
 				swaps = append(swaps, meteoraSwaps...)
 			}
 

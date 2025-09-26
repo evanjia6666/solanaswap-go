@@ -2,6 +2,7 @@ package solanaswapgo
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"strconv"
 
 	ag_binary "github.com/gagliardetto/binary"
@@ -108,11 +109,17 @@ func (p *Parser) processRaydSwaps(router solana.PublicKey, instructionIndex int,
 							tx.InputMint = solana.MustPublicKeyFromBase58(transfer.Mint)
 							tx.InputMintDecimals = transfer.Decimals
 							tx.InputAmount = transfer.Info.Amount
-						} else {
-							tx.OutputMint = solana.MustPublicKeyFromBase58(transfer.Mint)
-							tx.OutputMintDecimals = transfer.Decimals
-							tx.OutputAmount = transfer.Info.Amount
+							continue
 						}
+
+						if tx.InputMint.Equals(solana.MustPublicKeyFromBase58(transfer.Mint)) {
+							tx.InputAmount = transfer.Info.Amount
+							continue
+						}
+
+						tx.OutputMint = solana.MustPublicKeyFromBase58(transfer.Mint)
+						tx.OutputMintDecimals = transfer.Decimals
+						tx.OutputAmount = transfer.Info.Amount
 					case *TransferCheck:
 						transfer := swap.Data.(*TransferCheck)
 						amount, _ := strconv.ParseFloat(transfer.Info.TokenAmount.Amount, 64)
@@ -120,11 +127,17 @@ func (p *Parser) processRaydSwaps(router solana.PublicKey, instructionIndex int,
 							tx.InputMint = solana.MustPublicKeyFromBase58(transfer.Info.Mint)
 							tx.InputMintDecimals = transfer.Info.TokenAmount.Decimals
 							tx.InputAmount = uint64(amount)
-						} else {
-							tx.OutputMint = solana.MustPublicKeyFromBase58(transfer.Info.Mint)
-							tx.OutputMintDecimals = transfer.Info.TokenAmount.Decimals
-							tx.OutputAmount = uint64(amount)
+							continue
 						}
+
+						if tx.InputMint.Equals(solana.MustPublicKeyFromBase58(transfer.Info.Mint)) {
+							tx.InputAmount = uint64(amount)
+							continue
+						}
+
+						tx.OutputMint = solana.MustPublicKeyFromBase58(transfer.Info.Mint)
+						tx.OutputMintDecimals = transfer.Info.TokenAmount.Decimals
+						tx.OutputAmount = uint64(amount)
 					}
 				}
 
@@ -185,11 +198,18 @@ func (p *Parser) parseTransferTxInfo(progId solana.PublicKey, instructionIndex i
 				tx.InputMint = solana.MustPublicKeyFromBase58(transfer.Mint)
 				tx.InputMintDecimals = transfer.Decimals
 				tx.InputAmount = transfer.Info.Amount
-			} else {
-				tx.OutputMint = solana.MustPublicKeyFromBase58(transfer.Mint)
-				tx.OutputMintDecimals = transfer.Decimals
-				tx.OutputAmount = transfer.Info.Amount
+				continue
 			}
+
+			if tx.InputMint.Equals(solana.MustPublicKeyFromBase58(transfer.Mint)) {
+				tx.InputAmount = transfer.Info.Amount
+				continue
+			}
+
+			tx.OutputMint = solana.MustPublicKeyFromBase58(transfer.Mint)
+			tx.OutputMintDecimals = transfer.Decimals
+			tx.OutputAmount = transfer.Info.Amount
+
 		case *TransferCheck:
 			transfer := swap.Data.(*TransferCheck)
 			amount, _ := strconv.ParseFloat(transfer.Info.TokenAmount.Amount, 64)
@@ -197,11 +217,18 @@ func (p *Parser) parseTransferTxInfo(progId solana.PublicKey, instructionIndex i
 				tx.InputMint = solana.MustPublicKeyFromBase58(transfer.Info.Mint)
 				tx.InputMintDecimals = transfer.Info.TokenAmount.Decimals
 				tx.InputAmount = uint64(amount)
-			} else {
-				tx.OutputMint = solana.MustPublicKeyFromBase58(transfer.Info.Mint)
-				tx.OutputMintDecimals = transfer.Info.TokenAmount.Decimals
-				tx.OutputAmount = uint64(amount)
+				continue
 			}
+
+			if tx.InputMint.Equals(solana.MustPublicKeyFromBase58(transfer.Info.Mint)) {
+				tx.InputAmount = uint64(amount)
+				continue
+			}
+
+			tx.OutputMint = solana.MustPublicKeyFromBase58(transfer.Info.Mint)
+			tx.OutputMintDecimals = transfer.Info.TokenAmount.Decimals
+			tx.OutputAmount = uint64(amount)
+
 		}
 	}
 	err = p.setTxPoolInfo(progId, tx, p.txInfo.Message.Instructions[instructionIndex])
@@ -217,7 +244,7 @@ func (p *Parser) processOrcaSwaps(instructionIndex int) []SwapData {
 				if p.isTransfer(p.convertRPCToSolanaInstruction(innerInstruction)) {
 					transfer := p.processTransfer(p.convertRPCToSolanaInstruction(innerInstruction))
 					if transfer != nil {
-						swaps = append(innerSwaps, SwapData{Type: ORCA, Data: transfer})
+						innerSwaps = append(innerSwaps, SwapData{Type: ORCA, Data: transfer})
 					}
 				}
 			}
@@ -310,4 +337,81 @@ func (p *Parser) extractSPLTokenInfo() error {
 	p.splTokenInfoMap = splTokenAddresses
 
 	return nil
+}
+
+func (p *Parser) processGeneralRouter(instructionIndex int) []SwapData {
+
+	router := p.allAccountKeys[p.txInfo.Message.Instructions[instructionIndex].ProgramIDIndex]
+	innerInstructions := p.getInnerInstructions(instructionIndex)
+	var swaps []SwapData
+	for i, innerInstruction := range innerInstructions {
+		pID := p.allAccountKeys[innerInstruction.ProgramIDIndex]
+		if len(innerInstruction.Data) > 8 && swapDiscriminator[hex.EncodeToString(innerInstruction.Data[:8])] == true {
+			tx := &TxInfo{}
+			tx.Router = router
+			tx.Amm = pID
+			tx.Owner = *p.txInfo.Message.Signers().Last()
+			tx.Index = uint(instructionIndex*256) + uint(i)
+
+			innerSwaps := []SwapData{}
+			for _, inner := range innerInstructions[i:] {
+				switch {
+				case p.isTransfer(inner):
+					transfer := p.processTransfer(inner)
+					if transfer != nil {
+						innerSwaps = append(innerSwaps, SwapData{Type: RAYDIUM, Data: transfer})
+					}
+				case p.isTransferCheck(inner):
+					transfer := p.processTransferCheck(inner)
+					if transfer != nil {
+						innerSwaps = append(innerSwaps, SwapData{Type: RAYDIUM, Data: transfer})
+					}
+
+				}
+				if len(innerSwaps) >= 2 {
+					break
+				}
+			}
+			for i, swap := range innerSwaps {
+				switch swap.Data.(type) {
+				case *TransferData:
+					transfer := swap.Data.(*TransferData)
+					if i == 0 {
+						tx.InputMint = solana.MustPublicKeyFromBase58(transfer.Mint)
+						tx.InputMintDecimals = transfer.Decimals
+						tx.InputAmount = transfer.Info.Amount
+					} else {
+						tx.OutputMint = solana.MustPublicKeyFromBase58(transfer.Mint)
+						tx.OutputMintDecimals = transfer.Decimals
+						tx.OutputAmount = transfer.Info.Amount
+					}
+				case *TransferCheck:
+					transfer := swap.Data.(*TransferCheck)
+					amount, _ := strconv.ParseFloat(transfer.Info.TokenAmount.Amount, 64)
+					if i == 0 {
+						tx.InputMint = solana.MustPublicKeyFromBase58(transfer.Info.Mint)
+						tx.InputMintDecimals = transfer.Info.TokenAmount.Decimals
+						tx.InputAmount = uint64(amount)
+					} else {
+						tx.OutputMint = solana.MustPublicKeyFromBase58(transfer.Info.Mint)
+						tx.OutputMintDecimals = transfer.Info.TokenAmount.Decimals
+						tx.OutputAmount = uint64(amount)
+					}
+				}
+			}
+
+			if err := p.setTxPoolInfo(pID, tx, innerInstruction); err != nil {
+				p.Log.Error(err)
+				return swaps
+			}
+
+			swaps = append(swaps, SwapData{
+				Data: nil,
+				Tx:   tx,
+				Type: RAYDIUM,
+			})
+		}
+	}
+	return swaps
+
 }

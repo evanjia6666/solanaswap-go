@@ -33,11 +33,13 @@ Example Transactions:
 - Moonshot: 2XYu86VrUXiwNNj8WvngcXGytrCsSrpay69Rt3XBz9YZvCQcZJLjvDfh9UWETFtFW47vi4xG2CkiarRJwSe6VekE (Sell)
 - Multiple AMMs: 46Jp5EEUrmdCVcE3jeewqUmsMHhqiWWtj243UZNDFZ3mmma6h2DF4AkgPE9ToRYVLVrfKQCJphrvxbNk68Lub9vw //! not supported yet
 - OKX: 5xaT2SXQUyvyLGsnyyoKMwsDoHrx1enCKofkdRMdNaL5MW26gjQBM3AWebwjTJ49uqEqnFu5d9nXJek6gUSGCqbL
+-  61tz3fbr9zgdjveept3cqqChVXh3qYkSoMee3SoJ2jHbECz4vpc6bdhwrKT3XJExnqZRfgS6Sm24Xy51yGMn2yXk
+- 4oJDho4fCrSrwMoPQegWGZmDApkfvZa3iJaDM2ypYAwN4PkoTHCEYUJWcX6SFcrJRGAKZ53et3e3nVVhARVum5iD
 */
 
 func main() {
 	rpcClient := rpc.New(rpc.MainNetBeta.RPC)
-	txSig := solana.MustSignatureFromBase58("6T9QfA6s9TZ5mvRVb5fVmjy7LzPionXAq2TLY53eQALdETsXQT1xuNRu8JKyTBFJPAo6xMr7J5d78Aq4hCnDt8t")
+	txSig := solana.MustSignatureFromBase58("2k7R8BTRoKjNYA1Pfe5MeHxX8kgcjmQGGV6zFiStz8VKizAvch7d8KXh6DBftsb5pWVdMwtY1BCQLxhi8ZDAY5mU")
 
 	var maxTxVersion uint64 = 0
 	tx, err := rpcClient.GetTransaction(
