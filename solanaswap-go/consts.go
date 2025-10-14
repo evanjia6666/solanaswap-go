@@ -22,14 +22,16 @@ var (
 	RAYDIUM_CPMM_PROGRAM_ID                   = solana.MustPublicKeyFromBase58("CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C")
 	RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID = solana.MustPublicKeyFromBase58("CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK")
 	RAYDIUM_LAUNCHLAB_PROGRAM_ID              = solana.MustPublicKeyFromBase58("LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj")
-	METEORA_PROGRAM_ID                        = solana.MustPublicKeyFromBase58("LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo")
-	METEORA_POOLS_PROGRAM_ID                  = solana.MustPublicKeyFromBase58("Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB")
-	METEORA_DLMM_PROGRAM_ID                   = solana.MustPublicKeyFromBase58("King7ki4SKMBPb3iupnQwTyjsq294jaXsgLmJo8cb7T")
-	METEORA_DAMM_V2                           = solana.MustPublicKeyFromBase58("cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG")
-	ZEROFI                                    = solana.MustPublicKeyFromBase58("ZERor4xhbUycZ6gb9ntrhqscUcZmAbQDjEAtCf4hbZY")
-	PANCAKE_SWAP_PROGRAM_ID                   = solana.MustPublicKeyFromBase58("HpNfyc2Saw7RKkQd8nEL4khUcuPhQ7WwY1B2qjx8jxFq")
-	HUMIDIDI_PROGRAM_ID                       = solana.MustPublicKeyFromBase58("9H6tua7jkLhdm3w8BvgpTn5LZNU7g4ZynDmCiNN3q6Rp")
-	TESSERA_V_PROGRAM_ID                      = solana.MustPublicKeyFromBase58("TessVdML9pBGgG9yGks7o4HewRaXVAMuoVj4x83GLQH") // TODO
+
+	Meteora_Dynamic_Bonding_Curve_Program = solana.MustPublicKeyFromBase58("dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN")
+	METEORA_PROGRAM_ID                    = solana.MustPublicKeyFromBase58("LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo")
+	METEORA_POOLS_PROGRAM_ID              = solana.MustPublicKeyFromBase58("Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB")
+	METEORA_DLMM_PROGRAM_ID               = solana.MustPublicKeyFromBase58("King7ki4SKMBPb3iupnQwTyjsq294jaXsgLmJo8cb7T")
+	METEORA_DAMM_V2                       = solana.MustPublicKeyFromBase58("cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG")
+	ZEROFI                                = solana.MustPublicKeyFromBase58("ZERor4xhbUycZ6gb9ntrhqscUcZmAbQDjEAtCf4hbZY")
+	PANCAKE_SWAP_PROGRAM_ID               = solana.MustPublicKeyFromBase58("HpNfyc2Saw7RKkQd8nEL4khUcuPhQ7WwY1B2qjx8jxFq")
+	HUMIDIDI_PROGRAM_ID                   = solana.MustPublicKeyFromBase58("9H6tua7jkLhdm3w8BvgpTn5LZNU7g4ZynDmCiNN3q6Rp")
+	TESSERA_V_PROGRAM_ID                  = solana.MustPublicKeyFromBase58("TessVdML9pBGgG9yGks7o4HewRaXVAMuoVj4x83GLQH") // TODO
 	// solana.MustPublicKeyFromBase58("E4CKSsnjU9WXzrBJpNXnFi4gbb1kmLuavwZHd35TLeHs")
 
 	MOONSHOT_PROGRAM_ID       = solana.MustPublicKeyFromBase58("MoonCVVNZFSYkqNXP6bxHLPL6QQJiMagDL3qcqUQTrG")

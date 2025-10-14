@@ -87,7 +87,7 @@ func (p *Parser) processMeteoraSwaps(progID solana.PublicKey, outerIndex int, in
 					}
 				}
 			}
-		case progID.Equals(METEORA_POOLS_PROGRAM_ID):
+		case progID.Equals(METEORA_POOLS_PROGRAM_ID) || progID.Equals(Meteora_Dynamic_Bonding_Curve_Program):
 			for i, inner := range inners {
 				discriminator := inner.Data[:8]
 				inProgID := p.allAccountKeys[inner.ProgramIDIndex]
@@ -269,7 +269,7 @@ func (p *Parser) processMeteoraSwaps(progID solana.PublicKey, outerIndex int, in
 					Tx:   tx,
 				},
 			}
-		case progID.Equals(METEORA_POOLS_PROGRAM_ID):
+		case progID.Equals(METEORA_POOLS_PROGRAM_ID) || progID.Equals(Meteora_Dynamic_Bonding_Curve_Program):
 			// tx := &TxInfo{
 			// 	Type:      TxTypeSwap,
 			// 	Router:    progID,
