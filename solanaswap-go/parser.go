@@ -55,6 +55,7 @@ var (
 		calculateDiscriminator("global:redeem_v0"):              true,
 		calculateDiscriminator("global:sell"):                   true, // pumpfun AMM
 		calculateDiscriminator("global:buy"):                    true, // pumpfun AMM
+		calculateDiscriminator("global:swap2"):                  true, // meteora dlmm
 	}
 
 	removeDiscriminator = map[string]bool{
@@ -175,7 +176,9 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 			parsedSwaps = append(parsedSwaps, p.processRaydSwaps(progID, i, &outerInstruction, false)...)
 		case progID.Equals(ORCA_PROGRAM_ID):
 			parsedSwaps = append(parsedSwaps, p.processOrcaSwaps(i)...)
-		case progID.Equals(METEORA_PROGRAM_ID) || progID.Equals(METEORA_POOLS_PROGRAM_ID) || progID.Equals(METEORA_DLMM_PROGRAM_ID) || progID.Equals(Meteora_Dynamic_Bonding_Curve_Program):
+		case progID.Equals(METEORA_PROGRAM_ID) || progID.Equals(METEORA_POOLS_PROGRAM_ID) || progID.Equals(METEORA_DLMM_PROGRAM_ID) ||
+			progID.Equals(Meteora_Dynamic_Bonding_Curve_Program) ||
+			progID.Equals(METEORA_DAMM_V2):
 			parsedSwaps = append(parsedSwaps, p.processMeteoraSwaps(progID, i, 0, false)...)
 		case progID.Equals(PUMPFUN_AMM_PROGRAM_ID):
 			parsedSwaps = append(parsedSwaps, p.processPumpfunAMMSwaps(i, false)...)
@@ -575,7 +578,7 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 		poolOutAccountIndex = 3
 		//fromAccountIndex = 0
 		//toAccountIndex = 10
-		protocol = string(METEORA)
+		protocol = "Meteora_DLMM_Program"
 		if len(instruction.Data) >= discriminatorLen {
 			liquidity := false
 			if _, ok := removeDiscriminator[hex.EncodeToString(instruction.Data[:discriminatorLen])]; ok {
@@ -794,7 +797,7 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 		poolAccountIndex = 1
 		poolInAccountIndex = 4
 		poolOutAccountIndex = 5
-		protocol = "Meteora DAMM V2"
+		protocol = "Meteora_DAMM_V2"
 	case progID.Equals(ZEROFI):
 		poolAccountIndex = 0
 		poolInAccountIndex = 2

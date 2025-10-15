@@ -149,3 +149,10 @@ The above code fetches a Solana transaction, parses its contents, and extracts s
 - MinTech
 - Maestro
 - Nova Bot
+
+## idl to program
+ `anchor-go -idl meteora_dlmm_program/amm.json -output . -name meteora_dlmm_program`
+
+## idl convert
+` anchor idl convert meteora_dlmm_program/idl.json  -o meteora_dlmm_program/amm.json `
+

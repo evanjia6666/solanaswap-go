@@ -45,7 +45,7 @@ var (
 type SwapType string
 
 const (
-	PUMP_FUN SwapType = "PumpFun"
+	PUMP_FUN SwapType = "PumpFun.AMM"
 	JUPITER  SwapType = "Jupiter"
 	RAYDIUM  SwapType = "Raydium"
 	OKX      SwapType = "OKX"
