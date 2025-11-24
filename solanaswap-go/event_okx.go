@@ -17,7 +17,7 @@ var (
 )
 
 func (p *Parser) processOKXSwaps(instructionIndex int) []SwapData {
-	p.Log.Infof("starting okx swap parsing for instruction index: %d", instructionIndex)
+	// p.Log.Infof("starting okx swap parsing for instruction index: %d", instructionIndex)
 
 	parentInstruction := p.txInfo.Message.Instructions[instructionIndex]
 	programID := p.allAccountKeys[parentInstruction.ProgramIDIndex]
@@ -43,32 +43,32 @@ func (p *Parser) processOKXSwaps(instructionIndex int) []SwapData {
 
 	switch {
 	case bytes.Equal(discriminator, OKX_SWAP_DISCRIMINATOR[:]):
-		p.Log.Infof("processing okx swap type: okx_swap for instruction %d", instructionIndex)
+		//	p.Log.Infof("processing okx swap type: okx_swap for instruction %d", instructionIndex)
 		return p.processOKXRouterSwaps(instructionIndex)
 
 	case bytes.Equal(discriminator, OKX_SWAP2_DISCRIMINATOR[:]):
-		p.Log.Infof("processing okx swap type: okx_swap2 for instruction %d", instructionIndex)
+		//	p.Log.Infof("processing okx swap type: okx_swap2 for instruction %d", instructionIndex)
 		return p.processOKXRouterSwaps(instructionIndex)
 
 	case bytes.Equal(discriminator, OKX_COMMISSION_SPL_SWAP2_DISCRIMINATOR[:]):
-		p.Log.Infof("processing okx swap type: okx_commission_spl_swap2 for instruction %d", instructionIndex)
+		//	p.Log.Infof("processing okx swap type: okx_commission_spl_swap2 for instruction %d", instructionIndex)
 		return p.processOKXRouterSwaps(instructionIndex)
 
 	case bytes.Equal(discriminator, OKX_SWAP3_DISCRIMINATOR[:]):
-		p.Log.Infof("processing okx swap type: okx_swap3 for instruction %d", instructionIndex)
+		//	p.Log.Infof("processing okx swap type: okx_swap3 for instruction %d", instructionIndex)
 		return p.processOKXRouterSwaps(instructionIndex)
 
 	case bytes.Equal(discriminator, OKX_SWAP_V3_DISCRIMINATOR[:]):
-		p.Log.Infof("processing okx swap type: okx_swap_v3 for instruction %d", instructionIndex)
+		//	p.Log.Infof("processing okx swap type: okx_swap_v3 for instruction %d", instructionIndex)
 		return p.processOKXRouterSwaps(instructionIndex)
 	case bytes.Equal(discriminator, OKX_SWAP_TOB_V3_DISCRIMINATOR[:]):
-		p.Log.Infof("processing okx swap type: okx_swap_tob_v3 for instruction %d", instructionIndex)
+		//	p.Log.Infof("processing okx swap type: okx_swap_tob_v3 for instruction %d", instructionIndex)
 		return p.processOKXRouterSwaps(instructionIndex)
 	default:
-		p.Log.Warnf("unknown okx swap discriminator %x for instruction %d", discriminator, instructionIndex)
+		//	p.Log.Warnf("unknown okx swap discriminator %x for instruction %d", discriminator, instructionIndex)
 		swaps := p.processOKXRouterSwaps(instructionIndex)
 		if len(swaps) > 0 {
-			p.Log.Infof("successfully processed %d swaps with unknown discriminator", len(swaps))
+			//	p.Log.Infof("successfully processed %d swaps with unknown discriminator", len(swaps))
 			return swaps
 		}
 		p.Log.Warnf("no swaps found with unknown discriminator %x", discriminator)
@@ -178,7 +178,7 @@ func (p *Parser) processOKXRouterSwaps(instructionIndex int) []SwapData {
 
 	}
 
-	p.Log.Infof("processed okx router swaps: %d unique swaps", len(swaps))
+	// p.Log.Infof("processed okx router swaps: %d unique swaps", len(swaps))
 	return swaps
 }
 

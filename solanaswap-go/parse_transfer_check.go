@@ -107,7 +107,7 @@ func (p *Parser) processMeteoraSwaps(progID solana.PublicKey, outerIndex int, in
 					err := p.setTxPoolInfo(progID, tx, inner)
 					// tx, err := p.parseTransferTxInfo(progID, outerIndex, METEORA, innerSwaps)
 					if err != nil {
-						p.Log.Errorf("failed to parse tx info: %v, program: %s", err, METEORA)
+						p.Log.Errorf("failed to parse tx info: %v, program: %s, signatures: %v", err, progID, p.txInfo.Signatures)
 						return nil
 					}
 					return []SwapData{
@@ -143,13 +143,13 @@ func (p *Parser) processMeteoraSwaps(progID solana.PublicKey, outerIndex int, in
 							innerSwaps = append(innerSwaps, SwapData{Type: METEORA, Data: transfer})
 						}
 					}
-					if len(innerSwaps) >= 3 {
-						break
-					}
+					// if len(innerSwaps) >= 3 {
+					// 	break
+					// }
 				}
 				tx, err := p.parseTransferTxInfo(progID, outerIndex, METEORA, innerSwaps)
 				if err != nil {
-					p.Log.Errorf("failed to parse tx info: %v, program: %s", err, METEORA)
+					p.Log.Errorf("failed to parse tx info: %v, program: %s, signatures: %v", err, progID, p.txInfo.Signatures)
 					return nil
 				}
 				return []SwapData{
