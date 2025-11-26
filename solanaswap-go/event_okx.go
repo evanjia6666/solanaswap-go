@@ -39,7 +39,7 @@ func (p *Parser) processOKXSwaps(instructionIndex int) []SwapData {
 	}
 
 	discriminator := decodedBytes[:8]
-	p.Log.Infof("decoded okx swap instruction %d with discriminator: %x", instructionIndex, discriminator)
+	// p.Log.Infof("decoded okx swap instruction %d with discriminator: %x", instructionIndex, discriminator)
 
 	switch {
 	case bytes.Equal(discriminator, OKX_SWAP_DISCRIMINATOR[:]):
@@ -82,7 +82,7 @@ func (p *Parser) processOKXRouterSwaps(instructionIndex int) []SwapData {
 	processedProtocols := make(map[SwapType]bool)
 
 	innerInstructions := p.getInnerInstructions(instructionIndex)
-	p.Log.Infof("processing okx router swaps for instruction %d: %d inner instructions", instructionIndex, len(innerInstructions))
+	// p.Log.Infof("processing okx router swaps for instruction %d: %d inner instructions", instructionIndex, len(innerInstructions))
 	if len(innerInstructions) == 0 {
 		p.Log.Warnf("no inner instructions for instruction %d", instructionIndex)
 		return swaps

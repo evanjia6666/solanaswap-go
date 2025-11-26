@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"log"
 	"math"
 	"strconv"
 	"strings"
 
+	"github.com/franco-bianco/solanaswap-go/solanaswap-go/meteora_damm_v2"
 	meteoradlmmprogram "github.com/franco-bianco/solanaswap-go/solanaswap-go/meteora_dlmm_program"
 	"github.com/franco-bianco/solanaswap-go/solanaswap-go/meteora_pools_program"
 	"github.com/gagliardetto/solana-go"
@@ -37,9 +39,15 @@ func (p *Parser) processMeteoraSwaps(progID solana.PublicKey, outerIndex int, in
 		switch {
 		case progID.Equals(METEORA_POOLS_PROGRAM_ID) || progID.Equals(Meteora_Dynamic_Bonding_Curve_Program) || progID.Equals(METEORA_DAMM_V2) || progID.Equals(METEORA_PROGRAM_ID):
 			for i, inner := range inners {
+				if len(inner.Data) < 8 {
+					continue
+				}
+				log.Println("progID", progID, "tx", p.txInfo.Signatures[0])
 				discriminator := inner.Data[:8]
+
 				inProgID := p.allAccountKeys[inner.ProgramIDIndex]
-				if progID.Equals(inProgID) && bytes.Equal(discriminator, meteora_pools_program.Instruction_Swap[:]) {
+				if progID.Equals(inProgID) && (bytes.Equal(discriminator, meteora_pools_program.Instruction_Swap[:]) ||
+					bytes.Equal(meteoradlmmprogram.Instruction_Swap2[:], discriminator) || bytes.Equal(meteora_damm_v2.Instruction_Swap[:], discriminator)) {
 					var innerSwaps []SwapData
 					for _, innerInstruction := range inners[i+1:] {
 						switch {
@@ -126,9 +134,13 @@ func (p *Parser) processMeteoraSwaps(progID solana.PublicKey, outerIndex int, in
 		inners := p.getInnerInstructions(outerIndex)
 		switch {
 		case progID.Equals(METEORA_POOLS_PROGRAM_ID) || progID.Equals(Meteora_Dynamic_Bonding_Curve_Program) || progID.Equals(METEORA_DAMM_V2) || progID.Equals(METEORA_PROGRAM_ID):
-
+			// Check if outerInstriction.Data has at least 8 bytes before accessing [:8]
+			if len(outerInstriction.Data) < 8 {
+				return nil
+			}
 			discriminator := outerInstriction.Data[:8]
-			if bytes.Equal(discriminator, meteora_pools_program.Instruction_Swap[:]) || bytes.Equal(meteoradlmmprogram.Instruction_Swap2[:], discriminator) {
+			if bytes.Equal(discriminator, meteora_pools_program.Instruction_Swap[:]) || bytes.Equal(meteoradlmmprogram.Instruction_Swap2[:], discriminator) ||
+				bytes.Equal(meteora_damm_v2.Instruction_Swap[:], discriminator) {
 				var innerSwaps []SwapData
 				for _, innerInstruction := range inners {
 					switch {

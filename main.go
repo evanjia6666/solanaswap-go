@@ -39,7 +39,7 @@ Example Transactions:
 
 func main() {
 	rpcClient := rpc.New(rpc.MainNetBeta.RPC)
-	txSig := solana.MustSignatureFromBase58("3kyfsZKKK7Qf2GPc3wyxmCFwEb1bRxd1rpcTyck4bgQCYnUoFrQrmfRYPTLL8vjwKHUyDPYR78x1qDucv9Ywme8Q")
+	txSig := solana.MustSignatureFromBase58("iaTm2D8hfY9me3fifCgGBo9KbbBHGqBa1hdMEQdn86YQDyAyVBzobtrCLapQY7YvXxJaQr1sXgBcbFuMtaPWjuE")
 
 	var maxTxVersion uint64 = 0
 	tx, err := rpcClient.GetTransaction(
