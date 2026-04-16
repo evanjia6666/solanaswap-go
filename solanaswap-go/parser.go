@@ -900,10 +900,12 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 	if a, err := decimal.NewFromString(poolInBalance.UiTokenAmount.Amount); err == nil {
 		tx.PoolInAmount = a.BigInt()
 	}
+	tx.InputMintDecimals = poolInBalance.UiTokenAmount.Decimals
 
 	if a, err := decimal.NewFromString(poolOutBalance.UiTokenAmount.Amount); err == nil {
 		tx.PoolOutAmount = a.BigInt()
 	}
+	tx.OutputMintDecimals = poolOutBalance.UiTokenAmount.Decimals
 
 	tx.Protocol = protocol
 	return

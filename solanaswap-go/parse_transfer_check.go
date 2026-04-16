@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"log"
 	"math"
 	"strconv"
 	"strings"
@@ -42,7 +41,7 @@ func (p *Parser) processMeteoraSwaps(progID solana.PublicKey, outerIndex int, in
 				if len(inner.Data) < 8 {
 					continue
 				}
-				log.Println("progID", progID, "tx", p.txInfo.Signatures[0])
+				//	log.Println("progID", progID, "tx", p.txInfo.Signatures[0])
 				discriminator := inner.Data[:8]
 
 				inProgID := p.allAccountKeys[inner.ProgramIDIndex]
