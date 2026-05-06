@@ -59,6 +59,7 @@ const (
 	METEORA  SwapType = "Meteora"
 	MOONSHOT SwapType = "Moonshot"
 	ZEROFI_SWAP SwapType = "ZeroFi"
+	HUMIDIDI    SwapType = "HumidiFi"
 	UNKNOWN  SwapType = "Unknown"
 )
 

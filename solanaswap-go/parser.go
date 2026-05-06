@@ -68,7 +68,7 @@ type Parser struct {
 }
 
 var (
-	swapDiscriminator = map[string]bool{
+		swapDiscriminator = map[string]bool{
 		calculateDiscriminator("global:swap"):                   true,
 		calculateDiscriminator("global:swap_exact_out"):         true,
 		calculateDiscriminator("global:swap_exact_in"):          true,
@@ -83,6 +83,7 @@ var (
 		calculateDiscriminator("global:sell"):                   true, // pumpfun AMM
 		calculateDiscriminator("global:buy"):                    true, // pumpfun AMM
 		calculateDiscriminator("global:swap2"):                  true, // meteora dlmm
+		calculateDiscriminator("global:route_v2"):               true, // raydium cl (via jupiter)
 	}
 
 	removeDiscriminator = map[string]bool{
@@ -165,7 +166,15 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 		switch {
 		case progID.Equals(JUPITER_PROGRAM_ID) || progID.Equals(DFLOW_AGGREGATOR_V4):
 			skip = true
-			parsedSwaps = append(parsedSwaps, p.processJupiterSwaps(i)...)
+			jupiterSwaps := p.processJupiterSwaps(i)
+			if len(jupiterSwaps) > 0 {
+				parsedSwaps = append(parsedSwaps, jupiterSwaps...)
+			} else {
+				// Fallback: RouteV2 or other newer Jupiter instructions may not emit
+				// JupiterRouteEvent. In that case scan inner instructions like a
+				// normal router.
+				parsedSwaps = append(parsedSwaps, p.processRouterSwaps(i)...)
+			}
 		case progID.Equals(MOONSHOT_PROGRAM_ID):
 			skip = true
 			parsedSwaps = append(parsedSwaps, p.processMoonshotSwaps()...)
@@ -178,7 +187,7 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 			parsedSwaps = append(parsedSwaps, p.processOKXSwaps(i)...)
 		case progID.Equals(RAYDIUM_AMM_ROUTER_PROGRAM_ID):
 			skip = true
-			parsedSwaps = append(parsedSwaps, p.processRaydSwaps(RAYDIUM_AMM_ROUTER_PROGRAM_ID, i, &outerInstruction, true)...)
+			parsedSwaps = append(parsedSwaps, p.processRaydSwaps(RAYDIUM_AMM_ROUTER_PROGRAM_ID, i, 0, &outerInstruction, true)...)
 		}
 	}
 	if skip {
@@ -194,7 +203,7 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 			progID.Equals(RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID) ||
 			progID.Equals(RAYDIUM_LAUNCHLAB_PROGRAM_ID) ||
 			progID.Equals(solana.MustPublicKeyFromBase58("AP51WLiiqTdbZfgyRMs35PsZpdmLuPDdHYmrB23pEtMU")):
-			parsedSwaps = append(parsedSwaps, p.processRaydSwaps(progID, i, &outerInstruction, false)...)
+			parsedSwaps = append(parsedSwaps, p.processRaydSwaps(progID, i, 0, &outerInstruction, false)...)
 		case progID.Equals(ORCA_PROGRAM_ID):
 			parsedSwaps = append(parsedSwaps, p.processOrcaSwaps(i)...)
 		case progID.Equals(METEORA_PROGRAM_ID) || progID.Equals(METEORA_POOLS_PROGRAM_ID) || progID.Equals(METEORA_DLMM_PROGRAM_ID) ||
@@ -205,6 +214,8 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 			parsedSwaps = append(parsedSwaps, p.processPumpfunAMMSwaps(i, false)...)
 		case progID.Equals(ZEROFI):
 			parsedSwaps = append(parsedSwaps, p.processZerofiSwaps(i, false)...)
+		case progID.Equals(HUMIDIDI_PROGRAM_ID):
+			parsedSwaps = append(parsedSwaps, p.processHumidifiSwaps(i, 0, &outerInstruction)...)
 		case progID.Equals(PUMP_FUN_PROGRAM_ID) ||
 			progID.Equals(solana.MustPublicKeyFromBase58("BSfD6SHZigAfDWSjzD5Q41jw8LmKwtmjskPH9XW1mrRW")):
 			parsedSwaps = append(parsedSwaps, p.processPumpfunSwaps(i)...)
@@ -471,7 +482,7 @@ func (p *Parser) processRouterSwaps(instructionIndex int) []SwapData {
 			// progID.Equals(RAYDIUM_AMM_ROUTER_PROGRAM_ID) ||
 			progID.Equals(RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID)) && !processedProtocols[PROTOCOL_RAYDIUM]:
 			processedProtocols[PROTOCOL_RAYDIUM] = true
-			if raydSwaps := p.processRaydSwaps(progID, instructionIndex, &inner, true); len(raydSwaps) > 0 {
+			if raydSwaps := p.processRaydSwaps(progID, instructionIndex, idx, &inner, true); len(raydSwaps) > 0 {
 				swaps = append(swaps, raydSwaps...)
 			}
 
@@ -505,6 +516,10 @@ func (p *Parser) processRouterSwaps(instructionIndex int) []SwapData {
 		case progID.Equals(ZEROFI):
 			if zerofiSwaps := p.processZerofiSwaps(instructionIndex, true); len(zerofiSwaps) > 0 {
 				swaps = append(swaps, zerofiSwaps...)
+			}
+		case progID.Equals(HUMIDIDI_PROGRAM_ID):
+			if humidifiSwaps := p.processHumidifiSwaps(instructionIndex, idx, &inner); len(humidifiSwaps) > 0 {
+				swaps = append(swaps, humidifiSwaps...)
 			}
 		}
 	}
@@ -910,6 +925,7 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 		discriminatorWhiteList = [][]byte{
 			{149, 59, 131, 119, 245, 228, 249, 17},
 			{61, 203, 246, 110, 148, 191, 54, 98},
+			{94, 146, 200, 36, 3, 236, 122, 214},
 		}
 	case progID.Equals(TESSERA_V_PROGRAM_ID):
 		poolAccountIndex = 1

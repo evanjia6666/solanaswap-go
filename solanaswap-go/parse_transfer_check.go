@@ -158,7 +158,7 @@ func (p *Parser) processMeteoraSwaps(progID solana.PublicKey, outerIndex int, in
 					// 	break
 					// }
 				}
-				tx, err := p.parseTransferTxInfo(progID, outerIndex, METEORA, innerSwaps)
+				tx, err := p.parseTransferTxInfo(progID, outerIndex, METEORA, innerSwaps, nil)
 				if err != nil {
 					p.Log.Errorf("failed to parse tx info: %v, program: %s, signatures: %v", err, progID, p.txInfo.Signatures)
 					return nil

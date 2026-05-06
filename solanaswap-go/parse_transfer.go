@@ -35,7 +35,7 @@ type RaydiumInitLiquidity struct {
 	InitCoinAmount uint64
 }
 
-func (p *Parser) processRaydSwaps(router solana.PublicKey, instructionIndex int, instruction *solana.CompiledInstruction, isInner bool) []SwapData {
+func (p *Parser) processRaydSwaps(router solana.PublicKey, instructionIndex int, innerIdx int, instruction *solana.CompiledInstruction, isInner bool) []SwapData {
 	if router.Equals(RAYDIUM_V4_PROGRAM_ID) && instruction.Data[0] == 1 && !isInner { // init liquidity
 		decoder := ag_binary.NewBorshDecoder(instruction.Data[1:])
 		var data RaydiumInitLiquidity
@@ -160,7 +160,13 @@ func (p *Parser) processRaydSwaps(router solana.PublicKey, instructionIndex int,
 	for _, innerInstructionSet := range p.txMeta.InnerInstructions {
 		if innerInstructionSet.Index == uint16(instructionIndex) {
 			var innerSwaps []SwapData
-			for _, innerInstruction := range innerInstructionSet.Instructions {
+			for i, innerInstruction := range innerInstructionSet.Instructions {
+				// When invoked as an inner instruction by a router, only scan
+				// transfers that appear *after* the current AMM instruction so
+				// we don't mix transfers from earlier legs (e.g. PumpFun).
+				if isInner && i < innerIdx {
+					continue
+				}
 				switch {
 				case p.isTransfer(p.convertRPCToSolanaInstruction(innerInstruction)):
 					transfer := p.processTransfer(p.convertRPCToSolanaInstruction(innerInstruction))
@@ -174,7 +180,11 @@ func (p *Parser) processRaydSwaps(router solana.PublicKey, instructionIndex int,
 					}
 				}
 			}
-			tx, err := p.parseTransferTxInfo(router, instructionIndex, RAYDIUM, innerSwaps)
+			var inst *solana.CompiledInstruction
+			if isInner {
+				inst = instruction
+			}
+			tx, err := p.parseTransferTxInfo(router, instructionIndex, RAYDIUM, innerSwaps, inst)
 			if err == nil {
 				swaps = append(swaps, SwapData{Type: RAYDIUM, Tx: tx})
 			}
@@ -182,7 +192,7 @@ func (p *Parser) processRaydSwaps(router solana.PublicKey, instructionIndex int,
 	}
 	return swaps
 }
-func (p *Parser) parseTransferTxInfo(progId solana.PublicKey, instructionIndex int, protocal SwapType, swaps []SwapData) (tx *TxInfo, err error) {
+func (p *Parser) parseTransferTxInfo(progId solana.PublicKey, instructionIndex int, protocal SwapType, swaps []SwapData, instruction *solana.CompiledInstruction) (tx *TxInfo, err error) {
 	tx = &TxInfo{
 		Router:   progId,
 		Amm:      progId,
@@ -206,6 +216,9 @@ func (p *Parser) parseTransferTxInfo(progId solana.PublicKey, instructionIndex i
 				continue
 			}
 
+			if !tx.OutputMint.IsZero() {
+				continue
+			}
 			tx.OutputMint = solana.MustPublicKeyFromBase58(transfer.Mint)
 			tx.OutputMintDecimals = transfer.Decimals
 			tx.OutputAmount = transfer.Info.Amount
@@ -225,13 +238,19 @@ func (p *Parser) parseTransferTxInfo(progId solana.PublicKey, instructionIndex i
 				continue
 			}
 
+			if !tx.OutputMint.IsZero() {
+				continue
+			}
 			tx.OutputMint = solana.MustPublicKeyFromBase58(transfer.Info.Mint)
 			tx.OutputMintDecimals = transfer.Info.TokenAmount.Decimals
 			tx.OutputAmount = uint64(amount)
 
 		}
 	}
-	err = p.setTxPoolInfo(progId, tx, p.txInfo.Message.Instructions[instructionIndex])
+	if instruction == nil {
+		instruction = &p.txInfo.Message.Instructions[instructionIndex]
+	}
+	err = p.setTxPoolInfo(progId, tx, *instruction)
 	return
 }
 
@@ -248,9 +267,64 @@ func (p *Parser) processOrcaSwaps(instructionIndex int) []SwapData {
 					}
 				}
 			}
-			tx, err := p.parseTransferTxInfo(ORCA_PROGRAM_ID, instructionIndex, ORCA, innerSwaps)
+			tx, err := p.parseTransferTxInfo(ORCA_PROGRAM_ID, instructionIndex, ORCA, innerSwaps, nil)
 			if err == nil {
 				swaps = append(swaps, SwapData{Type: ORCA, Tx: tx})
+			}
+		}
+	}
+	return swaps
+}
+
+func (p *Parser) processHumidifiSwaps(instructionIndex int, innerIdx int, instruction *solana.CompiledInstruction) []SwapData {
+	var swaps []SwapData
+	for _, innerInstructionSet := range p.txMeta.InnerInstructions {
+		if innerInstructionSet.Index == uint16(instructionIndex) {
+			var innerSwaps []SwapData
+			for i, innerInstruction := range innerInstructionSet.Instructions {
+				if i < innerIdx {
+					continue
+				}
+				// Stop if we encounter another known AMM (avoid mixing multi-leg transfers)
+				if i > innerIdx {
+					progID := p.allAccountKeys[p.convertRPCToSolanaInstruction(innerInstruction).ProgramIDIndex]
+					if progID.Equals(PUMPFUN_AMM_PROGRAM_ID) ||
+						progID.Equals(RAYDIUM_V4_PROGRAM_ID) ||
+						progID.Equals(RAYDIUM_CPMM_PROGRAM_ID) ||
+						progID.Equals(RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID) ||
+						progID.Equals(ORCA_PROGRAM_ID) ||
+						progID.Equals(METEORA_PROGRAM_ID) ||
+						progID.Equals(METEORA_POOLS_PROGRAM_ID) ||
+						progID.Equals(METEORA_DLMM_PROGRAM_ID) ||
+						progID.Equals(METEORA_DAMM_V2) ||
+						progID.Equals(ZEROFI) {
+						break
+					}
+				}
+				switch {
+				case p.isTransfer(p.convertRPCToSolanaInstruction(innerInstruction)):
+					transfer := p.processTransfer(p.convertRPCToSolanaInstruction(innerInstruction))
+					if transfer != nil {
+						innerSwaps = append(innerSwaps, SwapData{Type: HUMIDIDI, Data: transfer})
+					}
+				case p.isTransferCheck(p.convertRPCToSolanaInstruction(innerInstruction)):
+					transfer := p.processTransferCheck(p.convertRPCToSolanaInstruction(innerInstruction))
+					if transfer != nil {
+						innerSwaps = append(innerSwaps, SwapData{Type: HUMIDIDI, Data: transfer})
+					}
+				}
+			}
+			tx, err := p.parseTransferTxInfo(HUMIDIDI_PROGRAM_ID, instructionIndex, HUMIDIDI, innerSwaps, instruction)
+			if err == nil {
+				// HumidiFi emits output transfer (pool -> user) first, then input transfer
+				// (user -> pool). parseTransferTxInfo assumes first transfer is input,
+				// so we need to swap input/output for HumidiFi.
+				if len(innerSwaps) >= 2 {
+					tx.InputMint, tx.OutputMint = tx.OutputMint, tx.InputMint
+					tx.InputAmount, tx.OutputAmount = tx.OutputAmount, tx.InputAmount
+					tx.InputMintDecimals, tx.OutputMintDecimals = tx.OutputMintDecimals, tx.InputMintDecimals
+				}
+				swaps = append(swaps, SwapData{Type: HUMIDIDI, Tx: tx})
 			}
 		}
 	}
