@@ -1,6 +1,6 @@
 module github.com/franco-bianco/solanaswap-go
 
-go 1.24.1
+go 1.25.8
 
 require (
 	github.com/gagliardetto/anchor-go v1.0.0
