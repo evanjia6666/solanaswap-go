@@ -39,6 +39,7 @@ var routerPrograms = []solana.PublicKey{
 	OKX_LABS_2_PROGRAM_ID,
 	ARBITRAGE_BOT_3S1R_PROGRAM_ID,
 	ARBITRAGE_BOT_B7QNN_PROGRAM_ID,
+	solana.MustPublicKeyFromBase58("AP51WLiiqTdbZfgyRMs35PsZpdmLuPDdHYmrB23pEtMU"),
 }
 
 func isRouterProgram(progID solana.PublicKey) bool {
@@ -201,15 +202,20 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 			progID.Equals(RAYDIUM_CPMM_PROGRAM_ID) ||
 			// progID.Equals(RAYDIUM_AMM_ROUTER_PROGRAM_ID) ||
 			progID.Equals(RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID) ||
-			progID.Equals(RAYDIUM_LAUNCHLAB_PROGRAM_ID) ||
-			progID.Equals(solana.MustPublicKeyFromBase58("AP51WLiiqTdbZfgyRMs35PsZpdmLuPDdHYmrB23pEtMU")):
+			progID.Equals(RAYDIUM_LAUNCHLAB_PROGRAM_ID):
 			parsedSwaps = append(parsedSwaps, p.processRaydSwaps(progID, i, 0, &outerInstruction, false)...)
 		case progID.Equals(ORCA_PROGRAM_ID):
 			parsedSwaps = append(parsedSwaps, p.processOrcaSwaps(i)...)
 		case progID.Equals(METEORA_PROGRAM_ID) || progID.Equals(METEORA_POOLS_PROGRAM_ID) || progID.Equals(METEORA_DLMM_PROGRAM_ID) ||
 			progID.Equals(Meteora_Dynamic_Bonding_Curve_Program) ||
 			progID.Equals(METEORA_DAMM_V2):
-			parsedSwaps = append(parsedSwaps, p.processMeteoraSwaps(progID, i, 0, false)...)
+			meteoraSwaps := p.processMeteoraSwaps(progID, i, 0, false)
+			if len(meteoraSwaps) > 0 {
+				parsedSwaps = append(parsedSwaps, meteoraSwaps...)
+			} else {
+				// Fallback: some Meteora programs act as routers (e.g. King7ki... DLMM router)
+				parsedSwaps = append(parsedSwaps, p.processRouterSwaps(i)...)
+			}
 		case progID.Equals(PUMPFUN_AMM_PROGRAM_ID):
 			parsedSwaps = append(parsedSwaps, p.processPumpfunAMMSwaps(i, false)...)
 		case progID.Equals(ZEROFI):
@@ -261,6 +267,7 @@ func (p *Parser) ProcessSwapData(swapDatas []SwapData) (*SwapInfo, *TxInfo, erro
 
 	jupiterSwaps := make([]SwapData, 0)
 	pumpfunSwaps := make([]SwapData, 0)
+	moonshotSwaps := make([]SwapData, 0)
 	otherSwaps := make([]SwapData, 0)
 
 	for _, swapData := range swapDatas {
@@ -269,6 +276,8 @@ func (p *Parser) ProcessSwapData(swapDatas []SwapData) (*SwapInfo, *TxInfo, erro
 			jupiterSwaps = append(jupiterSwaps, swapData)
 		case PUMP_FUN:
 			pumpfunSwaps = append(pumpfunSwaps, swapData)
+		case MOONSHOT:
+			moonshotSwaps = append(moonshotSwaps, swapData)
 		default:
 			otherSwaps = append(otherSwaps, swapData)
 		}
@@ -314,6 +323,29 @@ func (p *Parser) ProcessSwapData(swapDatas []SwapData) (*SwapInfo, *TxInfo, erro
 			return swapInfo, tx, nil
 		default:
 			otherSwaps = append(otherSwaps, pumpfunSwaps...)
+		}
+	}
+
+	if len(moonshotSwaps) > 0 {
+		if data, ok := moonshotSwaps[0].Data.(*MoonshotTradeInstructionWithMint); ok {
+			if data.TradeType == TradeTypeBuy {
+				swapInfo.TokenInMint = NATIVE_SOL_MINT_PROGRAM_ID
+				swapInfo.TokenInAmount = data.CollateralAmount
+				swapInfo.TokenInDecimals = 9
+				swapInfo.TokenOutMint = data.Mint
+				swapInfo.TokenOutAmount = data.TokenAmount
+				swapInfo.TokenOutDecimals = p.splDecimalsMap[data.Mint.String()]
+			} else {
+				swapInfo.TokenInMint = data.Mint
+				swapInfo.TokenInAmount = data.TokenAmount
+				swapInfo.TokenInDecimals = p.splDecimalsMap[data.Mint.String()]
+				swapInfo.TokenOutMint = NATIVE_SOL_MINT_PROGRAM_ID
+				swapInfo.TokenOutAmount = data.CollateralAmount
+				swapInfo.TokenOutDecimals = 9
+			}
+			swapInfo.AMMs = append(swapInfo.AMMs, string(moonshotSwaps[0].Type))
+			swapInfo.Timestamp = time.Now()
+			return swapInfo, tx, nil
 		}
 	}
 
@@ -676,6 +708,17 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 				poolInAccountIndex = 9
 				poolOutAccountIndex = 10
 			}
+		}
+	case progID.Equals(RAYDIUM_LAUNCHLAB_PROGRAM_ID):
+		poolAccountIndex = 2
+		poolInAccountIndex = 8
+		poolOutAccountIndex = 7
+		protocol = "Raydium Launchlab"
+		discriminatorLen = 1
+		discriminatorWhiteList = [][]byte{
+			{1},   // buy
+			{3},   // sell
+			{250}, // swap (0xfa)
 		}
 	case progID.Equals(METEORA_PROGRAM_ID):
 		poolAccountIndex = 0
