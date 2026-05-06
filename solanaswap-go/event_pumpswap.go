@@ -14,8 +14,10 @@ var (
 	PumpFunAMMSellEventDiscriminator = [16]byte{228, 69, 165, 46, 81, 203, 154, 29, 62, 47, 55, 10, 165, 3, 220, 42}
 	PumpFunAMMBuyEventDiscriminator  = [16]byte{228, 69, 165, 46, 81, 203, 154, 29, 103, 244, 82, 31, 44, 245, 119, 119}
 
-	PumpFunAMMSellDiscriminator = [8]byte{51, 230, 133, 164, 1, 127, 131, 173}
-	PumpFunAMMBuyDiscriminator  = [8]byte{102, 6, 61, 18, 1, 218, 235, 234}
+	PumpFunAMMSellDiscriminator         = [8]byte{51, 230, 133, 164, 1, 127, 131, 173}
+	PumpFunAMMBuyDiscriminator          = [8]byte{102, 6, 61, 18, 1, 218, 235, 234}
+	PumpFunAMMBuyExactQuoteInDiscriminator = [8]byte{198, 46, 21, 82, 180, 217, 232, 112}
+	PumpFunAMMSellExactInDiscriminator     = [8]byte{149, 39, 222, 155, 211, 124, 152, 26}
 )
 
 type PumpfunAMMBuyEvent struct {
@@ -138,15 +140,17 @@ func (p *Parser) isPumpFunAMMBuyDiscriminator(instr solana.CompiledInstruction) 
 }
 
 func (p *Parser) processPumFumAMMBuySwaps(router solana.PublicKey, instruction solana.CompiledInstruction) *TxInfo {
+	inputMint := p.allAccountKeys[instruction.Accounts[4]]
+	outputMint := p.allAccountKeys[instruction.Accounts[3]]
 	tx := &TxInfo{
 		Type:               TxTypeSwap,
 		Amm:                p.allAccountKeys[instruction.ProgramIDIndex],
 		Router:             router,
 		Owner:              *p.txInfo.Message.Signers().Last(),
-		InputMint:          p.allAccountKeys[instruction.Accounts[4]],
-		InputMintDecimals:  p.splTokenInfoMap[p.allAccountKeys[instruction.Accounts[4]].String()].Decimals,
-		OutputMint:         p.allAccountKeys[instruction.Accounts[3]],
-		OutputMintDecimals: p.splTokenInfoMap[p.allAccountKeys[instruction.Accounts[3]].String()].Decimals,
+		InputMint:          inputMint,
+		InputMintDecimals:  p.splDecimalsMap[inputMint.String()],
+		OutputMint:         outputMint,
+		OutputMintDecimals: p.splDecimalsMap[outputMint.String()],
 		Pool:               p.allAccountKeys[instruction.Accounts[0]],
 		PoolIn:             p.allAccountKeys[instruction.Accounts[8]],
 		PoolOut:            p.allAccountKeys[instruction.Accounts[7]],
@@ -156,21 +160,45 @@ func (p *Parser) processPumFumAMMBuySwaps(router solana.PublicKey, instruction s
 }
 
 func (p *Parser) processPumpFunAMMSellSwaps(router solana.PublicKey, instruction solana.CompiledInstruction) *TxInfo {
+	inputMint := p.allAccountKeys[instruction.Accounts[3]]
+	outputMint := p.allAccountKeys[instruction.Accounts[4]]
 	tx := &TxInfo{
 		Type:               TxTypeSwap,
 		Amm:                p.allAccountKeys[instruction.ProgramIDIndex],
 		Router:             router,
 		Owner:              *p.txInfo.Message.Signers().Last(),
-		InputMint:          p.allAccountKeys[instruction.Accounts[3]],
-		InputMintDecimals:  p.splTokenInfoMap[p.allAccountKeys[instruction.Accounts[3]].String()].Decimals,
-		OutputMint:         p.allAccountKeys[instruction.Accounts[4]],
-		OutputMintDecimals: p.splTokenInfoMap[p.allAccountKeys[instruction.Accounts[4]].String()].Decimals,
+		InputMint:          inputMint,
+		InputMintDecimals:  p.splDecimalsMap[inputMint.String()],
+		OutputMint:         outputMint,
+		OutputMintDecimals: p.splDecimalsMap[outputMint.String()],
 		Pool:               p.allAccountKeys[instruction.Accounts[0]],
 		PoolIn:             p.allAccountKeys[instruction.Accounts[7]],
 		PoolOut:            p.allAccountKeys[instruction.Accounts[8]],
 		Protocol:           string(PUMP_FUN),
 	}
 	return tx
+}
+
+func (p *Parser) isPumpFunAMMBuyExactQuoteInDiscriminator(instr solana.CompiledInstruction) bool {
+	if !p.allAccountKeys[instr.ProgramIDIndex].Equals(PUMPFUN_AMM_PROGRAM_ID) || len(instr.Data) < 8 {
+		return false
+	}
+	decodedBytes, err := base58.Decode(instr.Data.String())
+	if err != nil {
+		return false
+	}
+	return bytes.Equal(decodedBytes[:8], PumpFunAMMBuyExactQuoteInDiscriminator[:])
+}
+
+func (p *Parser) isPumpFunAMMSellExactInDiscriminator(instr solana.CompiledInstruction) bool {
+	if !p.allAccountKeys[instr.ProgramIDIndex].Equals(PUMPFUN_AMM_PROGRAM_ID) || len(instr.Data) < 8 {
+		return false
+	}
+	decodedBytes, err := base58.Decode(instr.Data.String())
+	if err != nil {
+		return false
+	}
+	return bytes.Equal(decodedBytes[:8], PumpFunAMMSellExactInDiscriminator[:])
 }
 
 func (p *Parser) isPumpFunAMMSellDiscriminator(instr solana.CompiledInstruction) bool {

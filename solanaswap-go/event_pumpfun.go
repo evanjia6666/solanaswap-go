@@ -63,42 +63,42 @@ func (p *Parser) processPumpfunAMMSwaps(PInstructionIndex int, isInner bool) []S
 		inners := p.getInnerInstructions(PInstructionIndex)
 		for i, inner := range inners {
 			switch {
-			case p.isPumpFunAMMBuyDiscriminator(inner):
-				// parse pool
-				tx := p.processPumFumAMMBuySwaps(pProgID, inner)
-				tx.Index = uint(PInstructionIndex*256) + uint(i)
-				// parse event
-				for x := i + 1; x < len(inners); x++ {
-					if p.isPumpFunAMMSwapEventInstruction(inners[x]) {
-						err := p.parsePumpfunAMMSwapEvent(tx, inners[x])
-						if err != nil {
-							p.Log.Errorf("error processing Pumpfun amm swap event: %s", err)
-							return nil
-						}
-						if tx != nil {
-							innerSwaps = append(innerSwaps, SwapData{Type: PUMP_FUN, Data: nil, Tx: tx})
-						}
-						break
+		case p.isPumpFunAMMBuyDiscriminator(inner) || p.isPumpFunAMMBuyExactQuoteInDiscriminator(inner):
+			// parse pool
+			tx := p.processPumFumAMMBuySwaps(pProgID, inner)
+			tx.Index = uint(PInstructionIndex*256) + uint(i)
+			// parse event
+			for x := i + 1; x < len(inners); x++ {
+				if p.isPumpFunAMMSwapEventInstruction(inners[x]) {
+					err := p.parsePumpfunAMMSwapEvent(tx, inners[x])
+					if err != nil {
+						p.Log.Errorf("error processing Pumpfun amm swap event: %s", err)
+						return nil
 					}
-				}
-				// insert event
-			case p.isPumpFunAMMSellDiscriminator(inner):
-				tx := p.processPumpFunAMMSellSwaps(pProgID, inner)
-				tx.Index = uint(PInstructionIndex*256) + uint(i)
-				// parse event
-				for x := i + 1; x < len(inners); x++ {
-					if p.isPumpFunAMMSwapEventInstruction(inners[x]) {
-						err := p.parsePumpfunAMMSwapEvent(tx, inners[x])
-						if err != nil {
-							p.Log.Errorf("error processing Pumpfun amm swap event: %s", err)
-							return nil
-						}
-						if tx != nil {
-							innerSwaps = append(innerSwaps, SwapData{Type: PUMP_FUN, Data: nil, Tx: tx})
-						}
-						break
+					if tx != nil {
+						innerSwaps = append(innerSwaps, SwapData{Type: PUMP_FUN, Data: nil, Tx: tx})
 					}
+					break
 				}
+			}
+			// insert event
+		case p.isPumpFunAMMSellDiscriminator(inner) || p.isPumpFunAMMSellExactInDiscriminator(inner):
+			tx := p.processPumpFunAMMSellSwaps(pProgID, inner)
+			tx.Index = uint(PInstructionIndex*256) + uint(i)
+			// parse event
+			for x := i + 1; x < len(inners); x++ {
+				if p.isPumpFunAMMSwapEventInstruction(inners[x]) {
+					err := p.parsePumpfunAMMSwapEvent(tx, inners[x])
+					if err != nil {
+						p.Log.Errorf("error processing Pumpfun amm swap event: %s", err)
+						return nil
+					}
+					if tx != nil {
+						innerSwaps = append(innerSwaps, SwapData{Type: PUMP_FUN, Data: nil, Tx: tx})
+					}
+					break
+				}
+			}
 			}
 
 		}
@@ -108,9 +108,9 @@ func (p *Parser) processPumpfunAMMSwaps(PInstructionIndex int, isInner bool) []S
 	var swaps []SwapData
 	var tx *TxInfo
 	switch {
-	case p.isPumpFunAMMBuyDiscriminator(parentInstruction):
+	case p.isPumpFunAMMBuyDiscriminator(parentInstruction) || p.isPumpFunAMMBuyExactQuoteInDiscriminator(parentInstruction):
 		tx = p.processPumFumAMMBuySwaps(pProgID, parentInstruction)
-	case p.isPumpFunAMMSellDiscriminator(parentInstruction):
+	case p.isPumpFunAMMSellDiscriminator(parentInstruction) || p.isPumpFunAMMSellExactInDiscriminator(parentInstruction):
 		tx = p.processPumpFunAMMSellSwaps(pProgID, parentInstruction)
 	default:
 		return nil
@@ -203,14 +203,16 @@ func (p *Parser) setPumpFunSwapTxInfo(tx *TxInfo, instructIndex int) error {
 	tx.Pool = p.allAccountKeys[instr.Accounts[poolIndex]]
 
 	switch {
-	case bytes.Equal(instr.Data[:8], PumpFunAMMBuyDiscriminator[:]):
+	case bytes.Equal(instr.Data[:8], PumpFunAMMBuyDiscriminator[:]),
+		bytes.Equal(instr.Data[:8], PumpFunAMMBuyExactQuoteInDiscriminator[:]):
 		// BUY: sell sol buy other
 		tx.InputMint = p.allAccountKeys[instr.Accounts[quoteMintIndex]]
 		tx.OutputMint = p.allAccountKeys[instr.Accounts[baseMintIndex]]
 		tx.PoolIn = p.allAccountKeys[instr.Accounts[quotePoolIndex]]
 		tx.PoolOut = p.allAccountKeys[instr.Accounts[basePoolIndex]]
 
-	case bytes.Equal(instr.Data[:8], PumpFunAMMSellDiscriminator[:]):
+	case bytes.Equal(instr.Data[:8], PumpFunAMMSellDiscriminator[:]),
+		bytes.Equal(instr.Data[:8], PumpFunAMMSellExactInDiscriminator[:]):
 		// SELL: sell other buy sol
 		tx.InputMint = p.allAccountKeys[instr.Accounts[baseMintIndex]]
 		tx.OutputMint = p.allAccountKeys[instr.Accounts[quoteMintIndex]]

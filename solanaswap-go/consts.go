@@ -16,6 +16,7 @@ var (
 	BLOOM_PROGRAM_ID      = solana.MustPublicKeyFromBase58("b1oomGGqPKGD6errbyfbVMBuzSC8WtAAYo8MwNafWW1")
 	MAESTRO_PROGRAM_ID    = solana.MustPublicKeyFromBase58("MaestroAAe9ge5HTc64VbBQZ6fP77pwvrhM8i1XWSAx")
 	NOVA_PROGRAM_ID       = solana.MustPublicKeyFromBase58("NoVA1TmDUqksaj2hB1nayFkPysjJbFiU76dT4qPw2wm")
+	ARBITRAGE_BOT_3S1R_PROGRAM_ID = solana.MustPublicKeyFromBase58("3s1rAymURnacreXreMy718GfqW6kygQsLNka1xDyW8pC")
 
 	RAYDIUM_V4_PROGRAM_ID                     = solana.MustPublicKeyFromBase58("675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8")
 	RAYDIUM_AMM_ROUTER_PROGRAM_ID             = solana.MustPublicKeyFromBase58("routeUGWgWzqBWFcrCfv8tritsqukccJPu3q5GPP3xS")
@@ -30,6 +31,10 @@ var (
 	METEORA_DAMM_V2                       = solana.MustPublicKeyFromBase58("cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG")
 	ZEROFI                                = solana.MustPublicKeyFromBase58("ZERor4xhbUycZ6gb9ntrhqscUcZmAbQDjEAtCf4hbZY")
 	BITGET_SWAP_PROGRAM_ID                = solana.MustPublicKeyFromBase58("2UUgGySTVXmKFatH7pGQo84ZrzdSYF5zw9iqrGwBMuuj")
+	BINANCE_WALLET_PROGRAM_ID             = solana.MustPublicKeyFromBase58("B3111yJCeHBcA1bizdJjUFPALfhAfSRnAbJzGUtnt56A")
+	AXIOM_TRADE_PROGRAM_ID                = solana.MustPublicKeyFromBase58("FLASHX8DrLbgeR8FcfNV1F5krxYcYMUdBkrP1EPBtxB9")
+	OKX_LABS_2_PROGRAM_ID                 = solana.MustPublicKeyFromBase58("proVF4pMXVaYqmy4NjniPh4pqKNfMmsihgd4wdkCX3u")
+	ARBITRAGE_BOT_B7QNN_PROGRAM_ID        = solana.MustPublicKeyFromBase58("B7qnnCiZd6WfNHc4becittNreSCjxqPSrKRtWc1YEZ1R")
 	PANCAKE_SWAP_PROGRAM_ID               = solana.MustPublicKeyFromBase58("HpNfyc2Saw7RKkQd8nEL4khUcuPhQ7WwY1B2qjx8jxFq")
 	HUMIDIDI_PROGRAM_ID                   = solana.MustPublicKeyFromBase58("9H6tua7jkLhdm3w8BvgpTn5LZNU7g4ZynDmCiNN3q6Rp")
 	TESSERA_V_PROGRAM_ID                  = solana.MustPublicKeyFromBase58("TessVdML9pBGgG9yGks7o4HewRaXVAMuoVj4x83GLQH") // TODO

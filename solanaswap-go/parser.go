@@ -23,6 +23,33 @@ const (
 	PROTOCOL_PUMPFUN = "pumpfun"
 )
 
+// routerPrograms 包含所有只需要委托 inner-instruction 解析的 router 程序。
+// 新增此类 router 时只需把 Program ID 加进这个 slice，无需修改 ParseTransaction 的 switch。
+var routerPrograms = []solana.PublicKey{
+	BANANA_GUN_PROGRAM_ID,
+	MINTECH_PROGRAM_ID,
+	BLOOM_PROGRAM_ID,
+	NOVA_PROGRAM_ID,
+	MAESTRO_PROGRAM_ID,
+	JUPITER_DCA_PROGRAM_ID,
+	THREE_Q_ROUTER_PROGRAM_ID,
+	BITGET_SWAP_PROGRAM_ID,
+	BINANCE_WALLET_PROGRAM_ID,
+	AXIOM_TRADE_PROGRAM_ID,
+	OKX_LABS_2_PROGRAM_ID,
+	ARBITRAGE_BOT_3S1R_PROGRAM_ID,
+	ARBITRAGE_BOT_B7QNN_PROGRAM_ID,
+}
+
+func isRouterProgram(progID solana.PublicKey) bool {
+	for _, r := range routerPrograms {
+		if progID.Equals(r) {
+			return true
+		}
+	}
+	return false
+}
+
 type TokenTransfer struct {
 	mint     string
 	amount   uint64
@@ -142,14 +169,7 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 		case progID.Equals(MOONSHOT_PROGRAM_ID):
 			skip = true
 			parsedSwaps = append(parsedSwaps, p.processMoonshotSwaps()...)
-		case progID.Equals(BANANA_GUN_PROGRAM_ID) ||
-			progID.Equals(MINTECH_PROGRAM_ID) ||
-			progID.Equals(BLOOM_PROGRAM_ID) ||
-			progID.Equals(NOVA_PROGRAM_ID) ||
-			progID.Equals(MAESTRO_PROGRAM_ID) ||
-			progID.Equals(JUPITER_DCA_PROGRAM_ID) ||
-			progID.Equals(THREE_Q_ROUTER_PROGRAM_ID) ||
-			progID.Equals(BITGET_SWAP_PROGRAM_ID):
+		case isRouterProgram(progID):
 			if innerSwaps := p.processRouterSwaps(i); len(innerSwaps) > 0 {
 				parsedSwaps = append(parsedSwaps, innerSwaps...)
 			}
@@ -297,9 +317,9 @@ func (p *Parser) ProcessSwapData(swapDatas []SwapData) (*SwapInfo, *TxInfo, erro
 			}
 		}
 		if firstTxBasedIdx != -1 {
-			// Collect all tx-based swaps and determine start/end by token flow
+			// Collect all tx-based swaps in ORIGINAL order (from swapDatas)
 			var txSwaps []SwapData
-			for _, sd := range otherSwaps {
+			for _, sd := range swapDatas {
 				if sd.Tx != nil && sd.Data == nil {
 					txSwaps = append(txSwaps, sd)
 				}
@@ -463,7 +483,8 @@ func (p *Parser) processRouterSwaps(instructionIndex int) []SwapData {
 
 		case (progID.Equals(METEORA_PROGRAM_ID) ||
 			progID.Equals(METEORA_POOLS_PROGRAM_ID) ||
-			progID.Equals(METEORA_DLMM_PROGRAM_ID)) && !processedProtocols[PROTOCOL_METEORA]:
+			progID.Equals(METEORA_DLMM_PROGRAM_ID) ||
+			progID.Equals(METEORA_DAMM_V2)) && !processedProtocols[PROTOCOL_METEORA]:
 			processedProtocols[PROTOCOL_METEORA] = true
 			if meteoraSwaps := p.processMeteoraSwaps(progID, instructionIndex, idx, true); len(meteoraSwaps) > 0 {
 				swaps = append(swaps, meteoraSwaps...)
