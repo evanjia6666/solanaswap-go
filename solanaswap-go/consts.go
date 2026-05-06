@@ -29,6 +29,7 @@ var (
 	METEORA_DLMM_PROGRAM_ID               = solana.MustPublicKeyFromBase58("King7ki4SKMBPb3iupnQwTyjsq294jaXsgLmJo8cb7T")
 	METEORA_DAMM_V2                       = solana.MustPublicKeyFromBase58("cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG")
 	ZEROFI                                = solana.MustPublicKeyFromBase58("ZERor4xhbUycZ6gb9ntrhqscUcZmAbQDjEAtCf4hbZY")
+	BITGET_SWAP_PROGRAM_ID                = solana.MustPublicKeyFromBase58("2UUgGySTVXmKFatH7pGQo84ZrzdSYF5zw9iqrGwBMuuj")
 	PANCAKE_SWAP_PROGRAM_ID               = solana.MustPublicKeyFromBase58("HpNfyc2Saw7RKkQd8nEL4khUcuPhQ7WwY1B2qjx8jxFq")
 	HUMIDIDI_PROGRAM_ID                   = solana.MustPublicKeyFromBase58("9H6tua7jkLhdm3w8BvgpTn5LZNU7g4ZynDmCiNN3q6Rp")
 	TESSERA_V_PROGRAM_ID                  = solana.MustPublicKeyFromBase58("TessVdML9pBGgG9yGks7o4HewRaXVAMuoVj4x83GLQH") // TODO
@@ -52,6 +53,7 @@ const (
 	ORCA     SwapType = "Orca"
 	METEORA  SwapType = "Meteora"
 	MOONSHOT SwapType = "Moonshot"
+	ZEROFI_SWAP SwapType = "ZeroFi"
 	UNKNOWN  SwapType = "Unknown"
 )
 

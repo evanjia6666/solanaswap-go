@@ -35,11 +35,12 @@ Example Transactions:
 - OKX: 5xaT2SXQUyvyLGsnyyoKMwsDoHrx1enCKofkdRMdNaL5MW26gjQBM3AWebwjTJ49uqEqnFu5d9nXJek6gUSGCqbL
 -  61tz3fbr9zgdjveept3cqqChVXh3qYkSoMee3SoJ2jHbECz4vpc6bdhwrKT3XJExnqZRfgS6Sm24Xy51yGMn2yXk
 - 4oJDho4fCrSrwMoPQegWGZmDApkfvZa3iJaDM2ypYAwN4PkoTHCEYUJWcX6SFcrJRGAKZ53et3e3nVVhARVum5iD
+- bitget aggreggator: 5JtAbkDqdDqKRd5dfEpYFBAFiBP6zTDwtx6kEfUJxiyK197Vgb5yYnTw7DYxjzSdbnqTr6CknpgErLADEa2SrkQh
 */
 
 func main() {
 	rpcClient := rpc.New(rpc.MainNetBeta.RPC)
-	txSig := solana.MustSignatureFromBase58("iaTm2D8hfY9me3fifCgGBo9KbbBHGqBa1hdMEQdn86YQDyAyVBzobtrCLapQY7YvXxJaQr1sXgBcbFuMtaPWjuE")
+	txSig := solana.MustSignatureFromBase58("2durZHGFkK4vjpWFGc5GWh5miDs8ke8nWkuee8AUYJA8F9qqT2Um76Q5jGsbK3w2MMgqwZKbnENTLWZoi3d6o2Ds")
 
 	var maxTxVersion uint64 = 0
 	tx, err := rpcClient.GetTransaction(

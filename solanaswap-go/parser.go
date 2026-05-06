@@ -148,7 +148,8 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 			progID.Equals(NOVA_PROGRAM_ID) ||
 			progID.Equals(MAESTRO_PROGRAM_ID) ||
 			progID.Equals(JUPITER_DCA_PROGRAM_ID) ||
-			progID.Equals(THREE_Q_ROUTER_PROGRAM_ID):
+			progID.Equals(THREE_Q_ROUTER_PROGRAM_ID) ||
+			progID.Equals(BITGET_SWAP_PROGRAM_ID):
 			if innerSwaps := p.processRouterSwaps(i); len(innerSwaps) > 0 {
 				parsedSwaps = append(parsedSwaps, innerSwaps...)
 			}
@@ -182,6 +183,8 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 			parsedSwaps = append(parsedSwaps, p.processMeteoraSwaps(progID, i, 0, false)...)
 		case progID.Equals(PUMPFUN_AMM_PROGRAM_ID):
 			parsedSwaps = append(parsedSwaps, p.processPumpfunAMMSwaps(i, false)...)
+		case progID.Equals(ZEROFI):
+			parsedSwaps = append(parsedSwaps, p.processZerofiSwaps(i, false)...)
 		case progID.Equals(PUMP_FUN_PROGRAM_ID) ||
 			progID.Equals(solana.MustPublicKeyFromBase58("BSfD6SHZigAfDWSjzD5Q41jw8LmKwtmjskPH9XW1mrRW")):
 			parsedSwaps = append(parsedSwaps, p.processPumpfunSwaps(i)...)
@@ -284,6 +287,68 @@ func (p *Parser) ProcessSwapData(swapDatas []SwapData) (*SwapInfo, *TxInfo, erro
 	}
 
 	if len(otherSwaps) > 0 {
+		// Handle tx-based swaps (Data nil but Tx present) — e.g. PumpFun AMM, ZeroFi
+		var firstTxBasedIdx int = -1
+		for i, sd := range otherSwaps {
+			if sd.Tx != nil && sd.Data == nil {
+				if firstTxBasedIdx == -1 {
+					firstTxBasedIdx = i
+				}
+			}
+		}
+		if firstTxBasedIdx != -1 {
+			// Collect all tx-based swaps and determine start/end by token flow
+			var txSwaps []SwapData
+			for _, sd := range otherSwaps {
+				if sd.Tx != nil && sd.Data == nil {
+					txSwaps = append(txSwaps, sd)
+				}
+			}
+			if len(txSwaps) > 0 {
+				// Build input/output mint sets
+				inputMints := make(map[string]bool)
+				outputMints := make(map[string]bool)
+				for _, sd := range txSwaps {
+					inputMints[sd.Tx.InputMint.String()] = true
+					outputMints[sd.Tx.OutputMint.String()] = true
+				}
+				var startSwap, endSwap *SwapData
+				for i := range txSwaps {
+					sd := &txSwaps[i]
+					// Start: input mint is not anyone's output
+					if !outputMints[sd.Tx.InputMint.String()] {
+						startSwap = sd
+					}
+					// End: output mint is not anyone's input
+					if !inputMints[sd.Tx.OutputMint.String()] {
+						endSwap = sd
+					}
+				}
+				if startSwap == nil {
+					startSwap = &txSwaps[0]
+				}
+				if endSwap == nil {
+					endSwap = &txSwaps[len(txSwaps)-1]
+				}
+				swapInfo.TokenInMint = startSwap.Tx.InputMint
+				swapInfo.TokenInAmount = startSwap.Tx.InputAmount
+				swapInfo.TokenInDecimals = startSwap.Tx.InputMintDecimals
+				swapInfo.TokenOutMint = endSwap.Tx.OutputMint
+				swapInfo.TokenOutAmount = endSwap.Tx.OutputAmount
+				swapInfo.TokenOutDecimals = endSwap.Tx.OutputMintDecimals
+			}
+
+			seenAMMs := make(map[string]bool)
+			for _, sd := range otherSwaps {
+				if !seenAMMs[string(sd.Type)] {
+					swapInfo.AMMs = append(swapInfo.AMMs, string(sd.Type))
+					seenAMMs[string(sd.Type)] = true
+				}
+			}
+			swapInfo.Timestamp = time.Now()
+			return swapInfo, tx, nil
+		}
+
 		var uniqueTokens []TokenTransfer
 		seenTokens := make(map[string]bool)
 
@@ -415,6 +480,10 @@ func (p *Parser) processRouterSwaps(instructionIndex int) []SwapData {
 			processedProtocols[PROTOCOL_PUMPFUN] = true
 			if pumpfunSwaps := p.processPumpfunSwaps(instructionIndex); len(pumpfunSwaps) > 0 {
 				swaps = append(swaps, pumpfunSwaps...)
+			}
+		case progID.Equals(ZEROFI):
+			if zerofiSwaps := p.processZerofiSwaps(instructionIndex, true); len(zerofiSwaps) > 0 {
+				swaps = append(swaps, zerofiSwaps...)
 			}
 		}
 	}
