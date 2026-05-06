@@ -154,6 +154,29 @@ https_proxy=http://127.0.0.1:7897 go run main.go
 
 ---
 
+## 6.1. Bitget DEX Aggregator — Single Leg (PumpFun AMM BuyExactQuoteIn)
+
+| 字段 | 值 |
+|------|-----|
+| **Tx Signature** | `52ctk8ybpLmqfJvjPBj59d7tZsZxasREVCBEkdxbueu6ZuhD6WvrJjD4ouMEV5TTeAMSeK5yB43VUnQ3pynkHQ9k` |
+| **Router** | `s7SunwrPG5SbViEKiViaDThPRJxkkTrNx2iRPN3exNC` |
+| **Purpose** | 验证 Bitget DEX Aggregator router 识别 |
+
+### Expected Swap Legs
+
+| # | Type | Input Mint | Input Amount | Decimals | Output Mint | Output Amount | Decimals |
+|---|------|-----------|-------------|----------|------------|--------------|----------|
+| 1 | `PumpFun.AMM` | `So11111111111111111111111111111111111111112` | 1970335967 | 9 | `E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump` | 2032255254700 | 6 |
+
+### Expected ProcessSwapData
+
+- `TokenInMint`: `So11111111111111111111111111111111111111112`
+- `TokenInAmount`: 1970335967
+- `TokenOutMint`: `E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump`
+- `TokenOutAmount`: 2032255254700
+
+---
+
 ## 7. Jupiter Aggregator v6 — Single Leg (Event-Based)
 
 | 字段 | 值 |

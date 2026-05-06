@@ -31,6 +31,7 @@ var (
 	METEORA_DAMM_V2                       = solana.MustPublicKeyFromBase58("cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG")
 	ZEROFI                                = solana.MustPublicKeyFromBase58("ZERor4xhbUycZ6gb9ntrhqscUcZmAbQDjEAtCf4hbZY")
 	BITGET_SWAP_PROGRAM_ID                = solana.MustPublicKeyFromBase58("2UUgGySTVXmKFatH7pGQo84ZrzdSYF5zw9iqrGwBMuuj")
+	BITGET_DEX_AGGREGATOR_PROGRAM_ID      = solana.MustPublicKeyFromBase58("s7SunwrPG5SbViEKiViaDThPRJxkkTrNx2iRPN3exNC")
 	BINANCE_WALLET_PROGRAM_ID             = solana.MustPublicKeyFromBase58("B3111yJCeHBcA1bizdJjUFPALfhAfSRnAbJzGUtnt56A")
 	AXIOM_TRADE_PROGRAM_ID                = solana.MustPublicKeyFromBase58("FLASHX8DrLbgeR8FcfNV1F5krxYcYMUdBkrP1EPBtxB9")
 	OKX_LABS_2_PROGRAM_ID                 = solana.MustPublicKeyFromBase58("proVF4pMXVaYqmy4NjniPh4pqKNfMmsihgd4wdkCX3u")
