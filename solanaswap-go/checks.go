@@ -79,6 +79,17 @@ func (p *Parser) isJupiterRouteEventInstruction(inst solana.CompiledInstruction)
 	return bytes.Equal(decodedBytes[:16], JupiterRouteEventDiscriminator[:])
 }
 
+func (p *Parser) isSwapsEventInstruction(inst solana.CompiledInstruction) bool {
+	if (!p.allAccountKeys[inst.ProgramIDIndex].Equals(JUPITER_PROGRAM_ID) && !p.allAccountKeys[inst.ProgramIDIndex].Equals(DFLOW_AGGREGATOR_V4)) || len(inst.Data) < 16 {
+		return false
+	}
+	decodedBytes, err := base58.Decode(inst.Data.String())
+	if err != nil {
+		return false
+	}
+	return bytes.Equal(decodedBytes[:8], AnchorSelfCPIDiscriminator[:]) && bytes.Equal(decodedBytes[8:16], SwapsEventDiscriminator[:])
+}
+
 func (p *Parser) isPumpFunAMMSwapEventInstruction(inst solana.CompiledInstruction) bool {
 	if !p.allAccountKeys[inst.ProgramIDIndex].Equals(PUMPFUN_AMM_PROGRAM_ID) || len(inst.Data) < 16 {
 		return false

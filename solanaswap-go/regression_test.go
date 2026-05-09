@@ -135,6 +135,14 @@ func TestRegression_AllCases(t *testing.T) {
 				{"Manifest", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 4489017, 9660288},
 			},
 		},
+		{
+			name: "Jupiter SharedAccountsRouteV2 — SwapsEvent (3KHMZ anomaly)",
+			sig:  "4Knpk5HUzdeSvE3hmiUHcPGcZzwsMUSspUvchTj5W6dDSB1dDVewbqpwdvcqf2XcrWweckKT9j89tPHzVVNnagLd",
+			expected: []legExpectation{
+				{"Meteora_DLMM_Program", "3KHMZhpthXuiCcgfTv7vVu9PpEz64KAEURFwi6Lopump", "So11111111111111111111111111111111111111112", 101946555003, 5594069444},
+				{"Meteora_DLMM_Program", "So11111111111111111111111111111111111111112", "F5tfztTnE4sYsMhZT5KrFpWvHmYSfJZoRjCuxKPbpump", 5594069444, 353707088201},
+			},
+		},
 	}
 
 	// Verify ProcessSwapData aggregation for multi-leg swaps
@@ -167,6 +175,16 @@ func TestRegression_AllCases(t *testing.T) {
 				expectInputAmt:   2270000000000,
 				expectOutputMint: "So11111111111111111111111111111111111111112",
 				expectOutputAmt:  1954407176,
+			},
+			{
+				name:             "Jupiter SharedAccountsRouteV2 SwapsEvent — 3KHMZ→SOL",
+				sig:              "4Knpk5HUzdeSvE3hmiUHcPGcZzwsMUSspUvchTj5W6dDSB1dDVewbqpwdvcqf2XcrWweckKT9j89tPHzVVNnagLd",
+				expectMultiLeg:   false,
+				expectInputMint:  "3KHMZhpthXuiCcgfTv7vVu9PpEz64KAEURFwi6Lopump",
+				expectInputAmt:   101946555003,
+				expectOutputMint: "So11111111111111111111111111111111111111112",
+				expectOutputAmt:  5594069444,
+				expectAmms:       []string{"Meteora_DLMM_Program"},
 			},
 		}
 

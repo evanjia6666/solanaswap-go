@@ -10,6 +10,8 @@ import (
 	"github.com/mr-tron/base58"
 )
 
+var SharedAccountsRouteV2Discriminator = [8]byte{209, 152, 83, 147, 124, 254, 216, 233}
+
 type JupiterSwapEvent struct {
 	Amm          solana.PublicKey
 	InputMint    solana.PublicKey
@@ -26,20 +28,60 @@ type JupiterSwapEventData struct {
 
 var JupiterRouteEventDiscriminator = [16]byte{228, 69, 165, 46, 81, 203, 154, 29, 64, 198, 205, 232, 38, 8, 113, 226}
 
+var AnchorSelfCPIDiscriminator = [8]byte{228, 69, 165, 46, 81, 203, 154, 29}
+var SwapEventDiscriminator = [8]byte{64, 198, 205, 232, 38, 8, 113, 226}
+var SwapsEventDiscriminator = [8]byte{152, 47, 78, 235, 192, 96, 110, 106}
+
+type SwapEventV2 struct {
+	InputMint    solana.PublicKey
+	InputAmount  uint64
+	OutputMint   solana.PublicKey
+	OutputAmount uint64
+}
+
 func (p *Parser) processJupiterSwaps(instructionIndex int) []SwapData {
 	var swaps []SwapData
 
+	isSharedAccountsV2 := false
+	outerInstr := p.txInfo.Message.Instructions[instructionIndex]
+	if len(outerInstr.Data) >= 8 {
+		match := true
+		for k := 0; k < 8; k++ {
+			if outerInstr.Data[k] != SharedAccountsRouteV2Discriminator[k] {
+				match = false
+				break
+			}
+		}
+		isSharedAccountsV2 = match
+	}
+
 	for _, innerInstructionSet := range p.txMeta.InnerInstructions {
 		if innerInstructionSet.Index == uint16(instructionIndex) {
-			last := 0 // 记录上一次 处理到的指令索引
+			last := 0
+			inferredAMMs := p.collectAMMsFromInnerInstructions(innerInstructionSet)
 			for i, innerInstruction := range innerInstructionSet.Instructions {
-				if p.isJupiterRouteEventInstruction(p.convertRPCToSolanaInstruction(innerInstruction)) {
-					eventData, err := p.parseJupiterRouteEventInstruction(p.convertRPCToSolanaInstruction(innerInstruction))
+				solInstr := p.convertRPCToSolanaInstruction(innerInstruction)
+				if p.isJupiterRouteEventInstruction(solInstr) {
+					eventData, err := p.parseJupiterRouteEventInstruction(solInstr)
 					if err != nil {
-						p.Log.Errorf("error processing Pumpfun trade event: %s", err)
+						p.Log.Errorf("error processing Jupiter trade event: %s", err)
 					}
 					if eventData != nil {
 						tx := p.parseJupiterTxInfo(eventData, innerInstructionSet, last)
+						swaps = append(swaps, SwapData{Type: JUPITER, Data: eventData, Tx: tx})
+					}
+					last = i
+				} else if isSharedAccountsV2 && p.isSwapsEventInstruction(solInstr) {
+					eventDataList, err := p.parseSwapsEventInstruction(solInstr)
+					if err != nil {
+						p.Log.Errorf("error processing SwapsEvent: %s", err)
+					}
+					for ei, eventData := range eventDataList {
+						tx := p.parseJupiterTxInfo(eventData, innerInstructionSet, last)
+						if ei < len(inferredAMMs) {
+							tx.Amm = inferredAMMs[ei]
+							tx.Protocol = protocolFromAMM(inferredAMMs[ei])
+						}
 						swaps = append(swaps, SwapData{Type: JUPITER, Data: eventData, Tx: tx})
 					}
 					last = i
@@ -48,6 +90,25 @@ func (p *Parser) processJupiterSwaps(instructionIndex int) []SwapData {
 		}
 	}
 	return swaps
+}
+
+func (p *Parser) collectAMMsFromInnerInstructions(innerSet rpc.InnerInstruction) []solana.PublicKey {
+	var amms []solana.PublicKey
+	for _, inner := range innerSet.Instructions {
+		progID := p.allAccountKeys[inner.ProgramIDIndex]
+		if !p.isKnownAMM(progID) || progID.Equals(JUPITER_PROGRAM_ID) || progID.Equals(DFLOW_AGGREGATOR_V4) {
+			continue
+		}
+		solInstr := p.convertRPCToSolanaInstruction(inner)
+		if len(solInstr.Data) < 8 {
+			continue
+		}
+		if solInstr.Data[0] == AnchorSelfCPIDiscriminator[0] {
+			continue
+		}
+		amms = append(amms, progID)
+	}
+	return amms
 }
 
 // containsDCAProgram checks if the transaction contains the Jupiter DCA program.
@@ -95,6 +156,49 @@ func handleJupiterRouteEvent(decoder *ag_binary.Decoder) (*JupiterSwapEvent, err
 		return nil, fmt.Errorf("error unmarshaling JupiterSwapEvent: %s", err)
 	}
 	return &event, nil
+}
+
+func (p *Parser) parseSwapsEventInstruction(instruction solana.CompiledInstruction) ([]*JupiterSwapEventData, error) {
+	decodedBytes, err := base58.Decode(instruction.Data.String())
+	if err != nil {
+		return nil, fmt.Errorf("error decoding instruction data: %s", err)
+	}
+	decoder := ag_binary.NewBorshDecoder(decodedBytes[16:])
+
+	var vecLen uint32
+	if err := decoder.Decode(&vecLen); err != nil {
+		return nil, fmt.Errorf("error reading SwapsEvent vec length: %s", err)
+	}
+
+	var events []*JupiterSwapEventData
+	for i := uint32(0); i < vecLen; i++ {
+		var v2 SwapEventV2
+		if err := decoder.Decode(&v2); err != nil {
+			return nil, fmt.Errorf("error decoding SwapEventV2[%d]: %s", i, err)
+		}
+
+		inputMintDecimals, exists := p.splDecimalsMap[v2.InputMint.String()]
+		if !exists {
+			inputMintDecimals = 0
+		}
+		outputMintDecimals, exists := p.splDecimalsMap[v2.OutputMint.String()]
+		if !exists {
+			outputMintDecimals = 0
+		}
+
+		events = append(events, &JupiterSwapEventData{
+			JupiterSwapEvent: JupiterSwapEvent{
+				Amm:          solana.PublicKey{},
+				InputMint:    v2.InputMint,
+				InputAmount:  v2.InputAmount,
+				OutputMint:   v2.OutputMint,
+				OutputAmount: v2.OutputAmount,
+			},
+			InputMintDecimals:  inputMintDecimals,
+			OutputMintDecimals: outputMintDecimals,
+		})
+	}
+	return events, nil
 }
 
 func (p *Parser) extractSPLDecimals() error {
@@ -151,9 +255,14 @@ func parseJupiterEvents(events []SwapData) (*SwapInfo, error) {
 		return nil, fmt.Errorf("no events provided")
 	}
 
-	var firstSwap, lastSwap *JupiterSwapEventData
+	var firstSwap *JupiterSwapEventData
+	var lastSwap *JupiterSwapEventData
+	inputAmounts := make(map[string]uint64)
+	outputAmounts := make(map[string]uint64)
+	seenAMMs := make(map[string]bool)
+	var amms []string
 
-	for i, event := range events {
+	for _, event := range events {
 		if event.Type != JUPITER {
 			continue
 		}
@@ -168,24 +277,41 @@ func parseJupiterEvents(events []SwapData) (*SwapInfo, error) {
 			return nil, fmt.Errorf("failed to unmarshal Jupiter event data: %v", err)
 		}
 
-		if i == 0 {
+		if firstSwap == nil {
 			firstSwap = &jupiterEvent
 		}
 		lastSwap = &jupiterEvent
+
+		inputKey := jupiterEvent.InputMint.String()
+		outputKey := jupiterEvent.OutputMint.String()
+		inputAmounts[inputKey] += jupiterEvent.InputAmount
+		outputAmounts[outputKey] += jupiterEvent.OutputAmount
+
+		if event.Tx != nil && !seenAMMs[event.Tx.Protocol] {
+			seenAMMs[event.Tx.Protocol] = true
+			amms = append(amms, event.Tx.Protocol)
+		}
 	}
 
 	if firstSwap == nil || lastSwap == nil {
 		return nil, fmt.Errorf("no valid Jupiter swaps found")
 	}
 
+	totalInputAmount := inputAmounts[firstSwap.InputMint.String()]
+	totalOutputAmount := outputAmounts[firstSwap.OutputMint.String()]
+
+	if len(amms) == 0 {
+		amms = []string{string(JUPITER)}
+	}
+
 	swapInfo := &SwapInfo{
-		AMMs:             []string{string(JUPITER)},
-		TokenInMint:      firstSwap.InputMint,
-		TokenInAmount:    firstSwap.InputAmount,
-		TokenInDecimals:  firstSwap.InputMintDecimals,
-		TokenOutMint:     lastSwap.OutputMint,
-		TokenOutAmount:   lastSwap.OutputAmount,
-		TokenOutDecimals: lastSwap.OutputMintDecimals,
+		AMMs:              amms,
+		TokenInMint:       firstSwap.InputMint,
+		TokenInAmount:     totalInputAmount,
+		TokenInDecimals:   firstSwap.InputMintDecimals,
+		TokenOutMint:      firstSwap.OutputMint,
+		TokenOutAmount:    totalOutputAmount,
+		TokenOutDecimals:  firstSwap.OutputMintDecimals,
 	}
 
 	return swapInfo, nil
@@ -209,6 +335,8 @@ func (p *Parser) parseJupiterTxInfo(eventData *JupiterSwapEventData, instr rpc.I
 
 func protocolFromAMM(amm solana.PublicKey) string {
 	switch {
+	case amm.Equals(solana.PublicKey{}):
+		return string(JUPITER)
 	case amm.Equals(RAYDIUM_V4_PROGRAM_ID) ||
 		amm.Equals(RAYDIUM_CPMM_PROGRAM_ID) ||
 		amm.Equals(RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID) ||
