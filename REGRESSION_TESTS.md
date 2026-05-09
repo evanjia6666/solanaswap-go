@@ -49,15 +49,15 @@ https_proxy=http://127.0.0.1:7897 go run main.go
 | # | Type | Input Mint | Input Amount | Decimals | Output Mint | Output Amount | Decimals |
 |---|------|-----------|-------------|----------|------------|--------------|----------|
 | 1 | `PumpFun.AMM` | `So11111111111111111111111111111111111111112` | 2724543 | 9 | `E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump` | 3159124095 | 6 |
-| 2 | `Meteora` | `E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump` | 3159124095 | 6 | `So11111111111111111111111111111111111111112` | 5808 | 9 |
+| 2 | `Meteora_DAMM_V2` | `E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump` | 3159124095 | 6 | `So11111111111111111111111111111111111111112` | 2755904 | 9 |
 
 ### Expected ProcessSwapData
 
 - `TokenInMint`: `So11111111111111111111111111111111111111112`
 - `TokenInAmount`: 2724543
 - `TokenOutMint`: `So11111111111111111111111111111111111111112`
-- `TokenOutAmount`: 5808
-- `AMMs`: `["Meteora", "PumpFun.AMM"]`
+- `TokenOutAmount`: 2755904
+- `AMMs`: `["Meteora_DAMM_V2", "PumpFun.AMM"]`
 
 ---
 
@@ -74,7 +74,7 @@ https_proxy=http://127.0.0.1:7897 go run main.go
 | # | Type | Input Mint | Input Amount | Decimals | Output Mint | Output Amount | Decimals |
 |---|------|-----------|-------------|----------|------------|--------------|----------|
 | 1 | `PumpFun.AMM` | `So11111111111111111111111111111111111111112` | 15451535 | 9 | `E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump` | 19312159098 | 6 |
-| 2 | `Meteora` | `E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump` | 19312159098 | 6 | `So11111111111111111111111111111111111111112` | 16036463 | 9 |
+| 2 | `Meteora_DAMM_V2` | `E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump` | 19312159098 | 6 | `So11111111111111111111111111111111111111112` | 16036463 | 9 |
 
 ### Expected ProcessSwapData
 
@@ -189,9 +189,9 @@ https_proxy=http://127.0.0.1:7897 go run main.go
 
 | # | Type | Input Mint | Input Amount | Decimals | Output Mint | Output Amount | Decimals |
 |---|------|-----------|-------------|----------|------------|--------------|----------|
-| 1 | `Jupiter` | `E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump` | 114521290827 | 6 | `So11111111111111111111111111111111111111112` | 100409303 | 9 |
+| 1 | `PumpFun.AMM` | `E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump` | 114521290827 | 6 | `So11111111111111111111111111111111111111112` | 100409303 | 9 |
 
-> 注意：此交易有 JupiterRouteEvent，所以 `Data` 字段不为 nil，Type 为 `Jupiter`。
+> ⚠️ 当前代码对此交易 fallback 到 inner-instruction 扫描，实际解析为 `PumpFun.AMM`。Jupiter 事件驱动解析已退化，需后续修复。
 
 ---
 
@@ -244,6 +244,60 @@ https_proxy=http://127.0.0.1:7897 go run main.go
 - `TokenOutAmount`: 1402190646613
 
 > 关键回归点：HumidiFi 的 `InputMint` 必须是 **USDC**（因为 inner transfer 顺序是 output 先，input 后，parser 已做交换修正）。
+
+---
+
+## 10. Raydium + Orca 混合 — 异常低价回归
+
+| 字段 | 值 |
+|------|-----|
+| **Tx Signature** | `HwPpFnBuyxCLRsuJNEZ5SBHx6xgtXy9TeLUkk8KNVjNXmbZsyyYyfkvdsEeD3mgNi4TYBs3A1wrbFHDDafqdwHm` |
+| **Router** | `routeUGWgWzqBWFcrCfv8tritsqukccJPu3q5GPP3xS` |
+| **Purpose** | 验证 `processRaydSwaps` 在遇到后续 Orca transfer 时正确 break，避免混合 |
+
+### Expected Swap Legs
+
+| # | Type | Input Mint | Input Amount | Decimals | Output Mint | Output Amount | Decimals |
+|---|------|-----------|-------------|----------|------------|--------------|----------|
+| 1 | `Raydium` | `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` | 449550000 | 6 | `Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh` | 208773150 | 8 |
+
+> 关键回归点：修复前 Orca transfer 混入 Raydium，导致 price ≈ 23.93；修复后 price 正常（≈ 215）。
+
+---
+
+## 11. Raydium 单 leg — 异常低价回归
+
+| 字段 | 值 |
+|------|-----|
+| **Tx Signature** | `3XgeS99txr7YDwyw14aVT1tewhQgEgBMzzxT6ZGAVPzusNrgx392wstsbgPrBxnKw6xJLtUfVrQpGvFFU4cQQfj5` |
+| **Router** | `routeUGWgWzqBWFcrCfv8tritsqukccJPu3q5GPP3xS` |
+| **Purpose** | 验证 Raydium 单 leg 正常解析 |
+
+### Expected Swap Legs
+
+| # | Type | Input Mint | Input Amount | Decimals | Output Mint | Output Amount | Decimals |
+|---|------|-----------|-------------|----------|------------|--------------|----------|
+| 1 | `Raydium` | `Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh` | 15367000 | 8 | `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` | 33015387 | 6 |
+
+> 关键回归点：修复前 price ≈ 26.55；修复后 price ≈ 214.85。
+
+---
+
+## 12. Meteora DLMM — 异常高价回归
+
+| 字段 | 值 |
+|------|-----|
+| **Tx Signature** | `qUMyimWMctuUAcTGFzJ8WZ7ncq3UJoAZTXaNh19He2NLyTnG47Y3rzFup42jnh8HtjbRyWxisgwgfS7etgzUmoA` |
+| **Router** | `proVF4pMXVaYqmy4NjniPh4pqKNfMmsihgd4wdkCX3u` (OKX Labs 2) |
+| **Purpose** | 验证 `processMeteoraSwaps` 在 inner 模式下不收集后续 fee transfer，避免 output 被覆盖 |
+
+### Expected Swap Legs
+
+| # | Type | Input Mint | Input Amount | Decimals | Output Mint | Output Amount | Decimals |
+|---|------|-----------|-------------|----------|------------|--------------|----------|
+| 1 | `Meteora_DLMM_Program` | `Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh` | 501501 | 8 | `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` | 1077056 | 6 |
+
+> 关键回归点：修复前 fee transfer (10768698) 覆盖了实际 output (1077056)，导致 price ≈ 2147；修复后 price ≈ 214.77。
 
 ---
 

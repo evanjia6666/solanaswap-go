@@ -167,6 +167,13 @@ func (p *Parser) processRaydSwaps(router solana.PublicKey, instructionIndex int,
 				if isInner && i < innerIdx {
 					continue
 				}
+				// Stop if we encounter another known AMM (avoid mixing multi-leg transfers)
+				if isInner && i > innerIdx {
+					progID := p.allAccountKeys[p.convertRPCToSolanaInstruction(innerInstruction).ProgramIDIndex]
+					if p.isKnownAMM(progID) {
+						break
+					}
+				}
 				switch {
 				case p.isTransfer(p.convertRPCToSolanaInstruction(innerInstruction)):
 					transfer := p.processTransfer(p.convertRPCToSolanaInstruction(innerInstruction))
@@ -329,6 +336,27 @@ func (p *Parser) processHumidifiSwaps(instructionIndex int, innerIdx int, instru
 		}
 	}
 	return swaps
+}
+
+// isKnownAMM checks if a program ID is a known AMM / DEX program.
+// Used to stop scanning transfers when encountering another AMM in a router tx.
+func (p *Parser) isKnownAMM(progID solana.PublicKey) bool {
+	return progID.Equals(RAYDIUM_V4_PROGRAM_ID) ||
+		progID.Equals(RAYDIUM_CPMM_PROGRAM_ID) ||
+		progID.Equals(RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID) ||
+		progID.Equals(RAYDIUM_LAUNCHLAB_PROGRAM_ID) ||
+		progID.Equals(ORCA_PROGRAM_ID) ||
+		progID.Equals(METEORA_PROGRAM_ID) ||
+		progID.Equals(METEORA_POOLS_PROGRAM_ID) ||
+		progID.Equals(METEORA_DLMM_PROGRAM_ID) ||
+		progID.Equals(METEORA_DAMM_V2) ||
+		progID.Equals(Meteora_Dynamic_Bonding_Curve_Program) ||
+		progID.Equals(PUMPFUN_AMM_PROGRAM_ID) ||
+		progID.Equals(PUMP_FUN_PROGRAM_ID) ||
+		progID.Equals(ZEROFI) ||
+		progID.Equals(HUMIDIDI_PROGRAM_ID) ||
+		progID.Equals(PANCAKE_SWAP_PROGRAM_ID) ||
+		progID.Equals(PHOENIX_PROGRAM_ID)
 }
 
 func (p *Parser) processTransfer(instr solana.CompiledInstruction) *TransferData {

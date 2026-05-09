@@ -47,24 +47,25 @@ func (p *Parser) processMeteoraSwaps(progID solana.PublicKey, outerIndex int, in
 				inProgID := p.allAccountKeys[inner.ProgramIDIndex]
 				if progID.Equals(inProgID) && (bytes.Equal(discriminator, meteora_pools_program.Instruction_Swap[:]) ||
 					bytes.Equal(meteoradlmmprogram.Instruction_Swap2[:], discriminator) || bytes.Equal(meteora_damm_v2.Instruction_Swap[:], discriminator)) {
-					var innerSwaps []SwapData
-					for _, innerInstruction := range inners[i+1:] {
-						switch {
-						case p.isTransferCheck(innerInstruction):
-							transfer := p.processTransferCheck(innerInstruction)
-							if transfer != nil {
-								innerSwaps = append(innerSwaps, SwapData{Type: METEORA, Data: transfer})
-							}
-						case p.isTransfer(innerInstruction):
-							transfer := p.processTransfer(innerInstruction)
-							if transfer != nil {
-								innerSwaps = append(innerSwaps, SwapData{Type: METEORA, Data: transfer})
-							}
+				var innerSwaps []SwapData
+				for _, innerInstruction := range inners[i+1:] {
+					inProgID2 := p.allAccountKeys[innerInstruction.ProgramIDIndex]
+					if !progID.Equals(inProgID2) && p.isKnownAMM(inProgID2) {
+						break
+					}
+					switch {
+					case p.isTransferCheck(innerInstruction):
+						transfer := p.processTransferCheck(innerInstruction)
+						if transfer != nil {
+							innerSwaps = append(innerSwaps, SwapData{Type: METEORA, Data: transfer})
 						}
-						if len(innerSwaps) >= 3 {
-							break
+					case p.isTransfer(innerInstruction):
+						transfer := p.processTransfer(innerInstruction)
+						if transfer != nil {
+							innerSwaps = append(innerSwaps, SwapData{Type: METEORA, Data: transfer})
 						}
 					}
+				}
 					tx := &TxInfo{
 						Router:   router,
 						Amm:      progID,
@@ -72,45 +73,53 @@ func (p *Parser) processMeteoraSwaps(progID solana.PublicKey, outerIndex int, in
 						Protocol: string(METEORA),
 						Index:    uint(outerIndex * 256),
 					}
-					for i, swap := range innerSwaps {
-						switch swap.Data.(type) {
-						case *TransferData:
-							transfer := swap.Data.(*TransferData)
-							if i == 0 {
-								tx.InputMint = solana.MustPublicKeyFromBase58(transfer.Mint)
-								tx.InputMintDecimals = transfer.Decimals
-								tx.InputAmount = transfer.Info.Amount
-								continue
-							}
-
-							if tx.InputMint.Equals(solana.MustPublicKeyFromBase58(transfer.Mint)) {
-								tx.InputAmount = transfer.Info.Amount
-								continue
-							}
-
-							tx.OutputMint = solana.MustPublicKeyFromBase58(transfer.Mint)
-							tx.OutputMintDecimals = transfer.Decimals
-							tx.OutputAmount = transfer.Info.Amount
-						case *TransferCheck:
-							transfer := swap.Data.(*TransferCheck)
-							amount, _ := strconv.ParseFloat(transfer.Info.TokenAmount.Amount, 64)
-							if i == 0 {
-								tx.InputMint = solana.MustPublicKeyFromBase58(transfer.Info.Mint)
-								tx.InputMintDecimals = transfer.Info.TokenAmount.Decimals
-								tx.InputAmount = uint64(amount)
-								continue
-							}
-
-							if tx.InputMint.Equals(solana.MustPublicKeyFromBase58(transfer.Info.Mint)) {
-								tx.InputAmount = uint64(amount)
-								continue
-							}
-
-							tx.OutputMint = solana.MustPublicKeyFromBase58(transfer.Info.Mint)
-							tx.OutputMintDecimals = transfer.Info.TokenAmount.Decimals
-							tx.OutputAmount = uint64(amount)
+				for i, swap := range innerSwaps {
+					switch swap.Data.(type) {
+					case *TransferData:
+						transfer := swap.Data.(*TransferData)
+						if i == 0 {
+							tx.InputMint = solana.MustPublicKeyFromBase58(transfer.Mint)
+							tx.InputMintDecimals = transfer.Decimals
+							tx.InputAmount = transfer.Info.Amount
+							continue
 						}
+
+						if tx.InputMint.Equals(solana.MustPublicKeyFromBase58(transfer.Mint)) {
+							tx.InputAmount = transfer.Info.Amount
+							continue
+						}
+
+						if !tx.OutputMint.IsZero() {
+							continue
+						}
+
+						tx.OutputMint = solana.MustPublicKeyFromBase58(transfer.Mint)
+						tx.OutputMintDecimals = transfer.Decimals
+						tx.OutputAmount = transfer.Info.Amount
+					case *TransferCheck:
+						transfer := swap.Data.(*TransferCheck)
+						amount, _ := strconv.ParseFloat(transfer.Info.TokenAmount.Amount, 64)
+						if i == 0 {
+							tx.InputMint = solana.MustPublicKeyFromBase58(transfer.Info.Mint)
+							tx.InputMintDecimals = transfer.Info.TokenAmount.Decimals
+							tx.InputAmount = uint64(amount)
+							continue
+						}
+
+						if tx.InputMint.Equals(solana.MustPublicKeyFromBase58(transfer.Info.Mint)) {
+							tx.InputAmount = uint64(amount)
+							continue
+						}
+
+						if !tx.OutputMint.IsZero() {
+							continue
+						}
+
+						tx.OutputMint = solana.MustPublicKeyFromBase58(transfer.Info.Mint)
+						tx.OutputMintDecimals = transfer.Info.TokenAmount.Decimals
+						tx.OutputAmount = uint64(amount)
 					}
+				}
 					err := p.setTxPoolInfo(progID, tx, inner)
 					// tx, err := p.parseTransferTxInfo(progID, outerIndex, METEORA, innerSwaps)
 					if err != nil {
