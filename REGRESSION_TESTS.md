@@ -301,6 +301,34 @@ https_proxy=http://127.0.0.1:7897 go run main.go
 
 ---
 
+## 13. Jupiter RouteV2 多 leg — ProcessSwapData 聚合回归
+
+| 字段 | 值 |
+|------|-----|
+| **Tx Signature** | `4jRhd8zs2pjhTCEuJ2argxZiw6wiQdHb4iK2u3CwgLmdFEp3tn21nASBKedV3544qEuqfqLcD6nydLNgt4kPQZwm` |
+| **Router** | `JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4` |
+| **Purpose** | 验证 Jupiter RouteV2 多 AMM 路由（ZeroFi USDC→SOL + Raydium CLMM SOL→Xsc9）被 ProcessSwapData 正确聚合为 USDC→Xsc9，避免中间 SOL 价格污染 K-line |
+
+### Expected Swap Legs (ParseTransaction)
+
+| # | Type | Input Mint | Input Amount | Decimals | Output Mint | Output Amount | Decimals |
+|---|------|-----------|-------------|----------|------------|--------------|----------|
+| 1 | `ZeroFi` | `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` | 9659601 | 6 | `So11111111111111111111111111111111111111112` | 103407029 | 9 |
+| 2 | `Raydium` | `So11111111111111111111111111111111111111112` | 103407029 | 9 | `Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh` | 4489017 | 8 |
+| 3 | `Manifest` | `Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh` | 4489017 | 8 | `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` | 9660288 | 6 |
+
+### Expected ProcessSwapData (aggregated)
+
+- `TokenInMint`: `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`
+- `TokenInAmount`: 9659601
+- `TokenOutMint`: `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`
+- `TokenOutAmount`: 9660288
+- `AMMs`: `["ZeroFi", "Raydium", "Manifest"]`
+
+> 关键回归点：Manifest 协议支持已添加（程序 ID: `MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms`），可解析 Jupiter RouteV2 中的 Manifest swap inner instruction。
+
+---
+
 ## 通用回归验证清单
 
 运行以上任意交易后，请额外检查：

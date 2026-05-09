@@ -192,34 +192,51 @@ func parseJupiterEvents(events []SwapData) (*SwapInfo, error) {
 }
 
 func (p *Parser) parseJupiterTxInfo(eventData *JupiterSwapEventData, instr rpc.InnerInstruction, last int) *TxInfo {
-	for n, instruction := range instr.Instructions {
-		if n < last {
-			continue
-		}
+	tx := &TxInfo{}
+	tx.Amm = eventData.Amm
+	tx.InputMint = eventData.InputMint
+	tx.OutputMint = eventData.OutputMint
+	tx.InputAmount = eventData.InputAmount
+	tx.OutputAmount = eventData.OutputAmount
+	tx.InputMintDecimals = eventData.InputMintDecimals
+	tx.OutputMintDecimals = eventData.OutputMintDecimals
+	tx.Protocol = protocolFromAMM(eventData.Amm)
+	tx.Owner = *p.txInfo.Message.Signers().Last()
+	tx.Router = p.allAccountKeys[p.txInfo.Message.Instructions[instr.Index].ProgramIDIndex]
+	tx.Index = uint(instr.Index*256) + uint(last)
+	return tx
+}
 
-		progID := p.allAccountKeys[instruction.ProgramIDIndex]
-		if !progID.Equals(eventData.Amm) {
-			continue
-		}
-
-		tx := &TxInfo{}
-		tx.Amm = eventData.Amm
-		tx.InputMint = eventData.InputMint
-		tx.OutputMint = eventData.OutputMint
-		tx.InputAmount = eventData.InputAmount
-		tx.OutputAmount = eventData.OutputAmount
-		tx.InputMintDecimals = eventData.InputMintDecimals
-		tx.OutputMintDecimals = eventData.OutputMintDecimals
-
-		if p.setTxPoolInfo(progID, tx, p.convertRPCToSolanaInstruction(instruction)) != nil {
-			continue
-		}
-		tx.Owner = *p.txInfo.Message.Signers().Last()
-		tx.Router = p.allAccountKeys[p.txInfo.Message.Instructions[instr.Index].ProgramIDIndex]
-		tx.Index = uint(instr.Index*256) + uint(n)
-		return tx
+func protocolFromAMM(amm solana.PublicKey) string {
+	switch {
+	case amm.Equals(RAYDIUM_V4_PROGRAM_ID) ||
+		amm.Equals(RAYDIUM_CPMM_PROGRAM_ID) ||
+		amm.Equals(RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID) ||
+		amm.Equals(RAYDIUM_LAUNCHLAB_PROGRAM_ID):
+		return "Raydium"
+	case amm.Equals(ORCA_PROGRAM_ID):
+		return "Orca"
+	case amm.Equals(METEORA_PROGRAM_ID):
+		return "Meteora_DLMM_Program"
+	case amm.Equals(METEORA_POOLS_PROGRAM_ID):
+		return "Meteora Pools Program"
+	case amm.Equals(METEORA_DLMM_PROGRAM_ID):
+		return "Meteora_DLMM_Program"
+	case amm.Equals(METEORA_DAMM_V2):
+		return "Meteora_DAMM_V2"
+	case amm.Equals(Meteora_Dynamic_Bonding_Curve_Program):
+		return "Meteora Dynamic Bonding Curve"
+	case amm.Equals(PUMPFUN_AMM_PROGRAM_ID):
+		return "PumpFun.AMM"
+	case amm.Equals(ZEROFI):
+		return "ZeroFi"
+	case amm.Equals(MANIFEST_PROGRAM_ID):
+		return "Manifest"
+	case amm.Equals(HUMIDIDI_PROGRAM_ID):
+		return "HumidiFi"
+	default:
+		return amm.String()
 	}
-	return nil
 }
 
 func (p *Parser) extractAccountPostBalance() error {

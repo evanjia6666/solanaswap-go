@@ -126,7 +126,78 @@ func TestRegression_AllCases(t *testing.T) {
 				{"Meteora_DLMM_Program", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 501501, 1077056},
 			},
 		},
+		{
+			name: "Jupiter RouteV2 multi-leg (regression)",
+			sig:  "4jRhd8zs2pjhTCEuJ2argxZiw6wiQdHb4iK2u3CwgLmdFEp3tn21nASBKedV3544qEuqfqLcD6nydLNgt4kPQZwm",
+			expected: []legExpectation{
+				{"ZeroFi", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "So11111111111111111111111111111111111111112", 9659601, 103407029},
+				{"Raydium", "So11111111111111111111111111111111111111112", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", 103407029, 4489017},
+				{"Manifest", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 4489017, 9660288},
+			},
+		},
 	}
+
+	// Verify ProcessSwapData aggregation for multi-leg swaps
+	t.Run("ProcessSwapData aggregation", func(t *testing.T) {
+		aggTests := []struct {
+			name              string
+			sig               string
+			expectMultiLeg    bool
+			expectInputMint   string
+			expectInputAmt    uint64
+			expectOutputMint  string
+			expectOutputAmt   uint64
+			expectAmms        []string
+		}{
+		{
+			name:             "Jupiter RouteV2 → aggregate USDC to Xsc9",
+			sig:              "4jRhd8zs2pjhTCEuJ2argxZiw6wiQdHb4iK2u3CwgLmdFEp3tn21nASBKedV3544qEuqfqLcD6nydLNgt4kPQZwm",
+			expectMultiLeg:   true,
+			expectInputMint:  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+			expectInputAmt:   9659601,
+			expectOutputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+			expectOutputAmt:  9660288,
+			expectAmms:       []string{"ZeroFi", "Raydium", "Manifest"},
+		},
+			{
+				name:             "PumpFun single-leg",
+				sig:              "2rwTmdPNtUNysZtUafAW9FBW7Vn6y2LyhQr9ZRATgPihFxFEgCUnLvRkQTGyG6g6h9cCKdLSag96DPuqYdm4j1df",
+				expectMultiLeg:   false,
+				expectInputMint:  "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump",
+				expectInputAmt:   2270000000000,
+				expectOutputMint: "So11111111111111111111111111111111111111112",
+				expectOutputAmt:  1954407176,
+			},
+		}
+
+		for _, tt := range aggTests {
+			t.Run(tt.name, func(t *testing.T) {
+				sig := solana.MustSignatureFromBase58(tt.sig)
+				var maxTxVersion uint64 = 0
+				tx, err := client.GetTransaction(context.TODO(), sig, &rpc.GetTransactionOpts{
+					Commitment:                     rpc.CommitmentConfirmed,
+					MaxSupportedTransactionVersion: &maxTxVersion,
+				})
+				require.NoError(t, err)
+				parser, err := NewParser(tx)
+				require.NoError(t, err)
+				legs, err := parser.ParseTransaction()
+				require.NoError(t, err)
+
+				swapInfo, _, err := parser.ProcessSwapData(legs)
+				require.NoError(t, err)
+				require.NotNil(t, swapInfo)
+				require.Equal(t, tt.expectMultiLeg, len(swapInfo.AMMs) > 1, "multi-leg mismatch")
+				require.Equal(t, tt.expectInputMint, swapInfo.TokenInMint.String(), "input mint mismatch")
+				require.Equal(t, tt.expectInputAmt, swapInfo.TokenInAmount, "input amount mismatch")
+				require.Equal(t, tt.expectOutputMint, swapInfo.TokenOutMint.String(), "output mint mismatch")
+				require.Equal(t, tt.expectOutputAmt, swapInfo.TokenOutAmount, "output amount mismatch")
+				if len(tt.expectAmms) > 0 {
+					require.ElementsMatch(t, tt.expectAmms, swapInfo.AMMs, "AMMs mismatch")
+				}
+			})
+		}
+	})
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

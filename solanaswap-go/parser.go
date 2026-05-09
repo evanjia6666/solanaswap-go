@@ -221,6 +221,8 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 			parsedSwaps = append(parsedSwaps, p.processPumpfunAMMSwaps(i, false)...)
 		case progID.Equals(ZEROFI):
 			parsedSwaps = append(parsedSwaps, p.processZerofiSwaps(i, false)...)
+		case progID.Equals(MANIFEST_PROGRAM_ID):
+			parsedSwaps = append(parsedSwaps, p.processManifestSwaps(i, false)...)
 		case progID.Equals(HUMIDIDI_PROGRAM_ID):
 			parsedSwaps = append(parsedSwaps, p.processHumidifiSwaps(i, 0, &outerInstruction)...)
 		case progID.Equals(PUMP_FUN_PROGRAM_ID) ||
@@ -553,6 +555,10 @@ func (p *Parser) processRouterSwaps(instructionIndex int) []SwapData {
 		case progID.Equals(HUMIDIDI_PROGRAM_ID):
 			if humidifiSwaps := p.processHumidifiSwaps(instructionIndex, idx, &inner); len(humidifiSwaps) > 0 {
 				swaps = append(swaps, humidifiSwaps...)
+			}
+		case progID.Equals(MANIFEST_PROGRAM_ID):
+			if manifestSwaps := p.processManifestSwaps(instructionIndex, true); len(manifestSwaps) > 0 {
+				swaps = append(swaps, manifestSwaps...)
 			}
 		}
 	}

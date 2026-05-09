@@ -45,8 +45,10 @@ var (
 	ORCA_PROGRAM_ID           = solana.MustPublicKeyFromBase58("whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc")
 	OKX_DEX_ROUTER_PROGRAM_ID = solana.MustPublicKeyFromBase58("6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma")
 	PUMPFUN_AMM_PROGRAM_ID    = solana.MustPublicKeyFromBase58("pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA")
+	MANIFEST_PROGRAM_ID       = solana.MustPublicKeyFromBase58("MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms")
 
 	NATIVE_SOL_MINT_PROGRAM_ID = solana.MustPublicKeyFromBase58("So11111111111111111111111111111111111111112")
+	Token2022ProgramID           = solana.MustPublicKeyFromBase58("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb")
 )
 
 type SwapType string
@@ -61,6 +63,7 @@ const (
 	MOONSHOT SwapType = "Moonshot"
 	ZEROFI_SWAP SwapType = "ZeroFi"
 	HUMIDIDI    SwapType = "HumidiFi"
+	MANIFEST    SwapType = "Manifest"
 	UNKNOWN  SwapType = "Unknown"
 )
 

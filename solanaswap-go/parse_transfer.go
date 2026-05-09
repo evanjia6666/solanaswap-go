@@ -448,6 +448,18 @@ func (p *Parser) processGeneralRouter(instructionIndex int) []SwapData {
 	var swaps []SwapData
 	for i, innerInstruction := range innerInstructions {
 		pID := p.allAccountKeys[innerInstruction.ProgramIDIndex]
+
+		// Check for Manifest swap instructions (1-byte discriminator: 4 or 13)
+		if pID.Equals(MANIFEST_PROGRAM_ID) && len(innerInstruction.Data) >= 19 {
+			discriminator := innerInstruction.Data[0]
+			if discriminator == manifestSwapDiscriminator || discriminator == manifestSwapV2Discriminator {
+				// Parse Manifest swap directly from instruction data
+				manifestSwaps := p.processManifestSwapsFromInner(instructionIndex, i, &innerInstruction, router)
+				swaps = append(swaps, manifestSwaps...)
+				continue
+			}
+		}
+
 		if len(innerInstruction.Data) > 8 && swapDiscriminator[hex.EncodeToString(innerInstruction.Data[:8])] == true {
 			tx := &TxInfo{}
 			tx.Router = router
