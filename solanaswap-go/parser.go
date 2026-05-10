@@ -208,6 +208,7 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 		case progID.Equals(ORCA_PROGRAM_ID):
 			parsedSwaps = append(parsedSwaps, p.processOrcaSwaps(i)...)
 		case progID.Equals(METEORA_PROGRAM_ID) || progID.Equals(METEORA_POOLS_PROGRAM_ID) || progID.Equals(METEORA_DLMM_PROGRAM_ID) ||
+			progID.Equals(METEORA_DLMM_REALQ_PROGRAM_ID) ||
 			progID.Equals(Meteora_Dynamic_Bonding_Curve_Program) ||
 			progID.Equals(METEORA_DAMM_V2):
 			meteoraSwaps := p.processMeteoraSwaps(progID, i, 0, false)

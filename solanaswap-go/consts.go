@@ -28,6 +28,8 @@ var (
 	METEORA_PROGRAM_ID                    = solana.MustPublicKeyFromBase58("LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo")
 	METEORA_POOLS_PROGRAM_ID              = solana.MustPublicKeyFromBase58("Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB")
 	METEORA_DLMM_PROGRAM_ID               = solana.MustPublicKeyFromBase58("King7ki4SKMBPb3iupnQwTyjsq294jaXsgLmJo8cb7T")
+	METEORA_DLMM_REALQ_PROGRAM_ID         = solana.MustPublicKeyFromBase58("REALQqNEomY6cQGZJUGwywTBD2UmDT32rZcNnfxQ5N2")
+	PFEE_PROGRAM_ID                       = solana.MustPublicKeyFromBase58("pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ")
 	METEORA_DAMM_V2                       = solana.MustPublicKeyFromBase58("cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG")
 	ZEROFI                                = solana.MustPublicKeyFromBase58("ZERor4xhbUycZ6gb9ntrhqscUcZmAbQDjEAtCf4hbZY")
 	BITGET_SWAP_PROGRAM_ID                = solana.MustPublicKeyFromBase58("2UUgGySTVXmKFatH7pGQo84ZrzdSYF5zw9iqrGwBMuuj")

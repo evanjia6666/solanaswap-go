@@ -59,6 +59,7 @@ func (p *Parser) processJupiterSwaps(instructionIndex int) []SwapData {
 		if innerInstructionSet.Index == uint16(instructionIndex) {
 			last := 0
 			inferredAMMs := p.collectAMMsFromInnerInstructions(innerInstructionSet)
+			useSwapsEvent := isSharedAccountsV2 || p.hasUnknownAMMsInInnerInstructions(innerInstructionSet)
 			for i, innerInstruction := range innerInstructionSet.Instructions {
 				solInstr := p.convertRPCToSolanaInstruction(innerInstruction)
 				if p.isJupiterRouteEventInstruction(solInstr) {
@@ -71,7 +72,7 @@ func (p *Parser) processJupiterSwaps(instructionIndex int) []SwapData {
 						swaps = append(swaps, SwapData{Type: JUPITER, Data: eventData, Tx: tx})
 					}
 					last = i
-				} else if isSharedAccountsV2 && p.isSwapsEventInstruction(solInstr) {
+				} else if useSwapsEvent && p.isSwapsEventInstruction(solInstr) {
 					eventDataList, err := p.parseSwapsEventInstruction(solInstr)
 					if err != nil {
 						p.Log.Errorf("error processing SwapsEvent: %s", err)
@@ -96,7 +97,10 @@ func (p *Parser) collectAMMsFromInnerInstructions(innerSet rpc.InnerInstruction)
 	var amms []solana.PublicKey
 	for _, inner := range innerSet.Instructions {
 		progID := p.allAccountKeys[inner.ProgramIDIndex]
-		if !p.isKnownAMM(progID) || progID.Equals(JUPITER_PROGRAM_ID) || progID.Equals(DFLOW_AGGREGATOR_V4) {
+		if progID.Equals(JUPITER_PROGRAM_ID) || progID.Equals(DFLOW_AGGREGATOR_V4) {
+			continue
+		}
+		if p.isUtilityProgram(progID) {
 			continue
 		}
 		solInstr := p.convertRPCToSolanaInstruction(inner)
@@ -109,6 +113,40 @@ func (p *Parser) collectAMMsFromInnerInstructions(innerSet rpc.InnerInstruction)
 		amms = append(amms, progID)
 	}
 	return amms
+}
+
+func (p *Parser) hasUnknownAMMsInInnerInstructions(innerSet rpc.InnerInstruction) bool {
+	for _, inner := range innerSet.Instructions {
+		progID := p.allAccountKeys[inner.ProgramIDIndex]
+		if progID.Equals(JUPITER_PROGRAM_ID) || progID.Equals(DFLOW_AGGREGATOR_V4) {
+			continue
+		}
+		if p.isUtilityProgram(progID) {
+			continue
+		}
+		if p.isKnownAMM(progID) {
+			continue
+		}
+		solInstr := p.convertRPCToSolanaInstruction(inner)
+		if len(solInstr.Data) < 8 {
+			continue
+		}
+		if solInstr.Data[0] == AnchorSelfCPIDiscriminator[0] {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
+func (p *Parser) isUtilityProgram(progID solana.PublicKey) bool {
+	return progID.Equals(solana.TokenProgramID) ||
+		progID.Equals(solana.Token2022ProgramID) ||
+		progID.Equals(solana.SPLAssociatedTokenAccountProgramID) ||
+		progID.Equals(solana.ComputeBudget) ||
+		progID.Equals(solana.SystemProgramID) ||
+		progID.Equals(solana.MemoProgramID) ||
+		progID.Equals(PFEE_PROGRAM_ID)
 }
 
 // containsDCAProgram checks if the transaction contains the Jupiter DCA program.
@@ -319,6 +357,7 @@ func parseJupiterEvents(events []SwapData) (*SwapInfo, error) {
 
 func (p *Parser) parseJupiterTxInfo(eventData *JupiterSwapEventData, instr rpc.InnerInstruction, last int) *TxInfo {
 	tx := &TxInfo{}
+	tx.Type = TxTypeSwap
 	tx.Amm = eventData.Amm
 	tx.InputMint = eventData.InputMint
 	tx.OutputMint = eventData.OutputMint
@@ -348,7 +387,8 @@ func protocolFromAMM(amm solana.PublicKey) string {
 		return "Meteora_DLMM_Program"
 	case amm.Equals(METEORA_POOLS_PROGRAM_ID):
 		return "Meteora Pools Program"
-	case amm.Equals(METEORA_DLMM_PROGRAM_ID):
+	case amm.Equals(METEORA_DLMM_PROGRAM_ID) ||
+		amm.Equals(METEORA_DLMM_REALQ_PROGRAM_ID):
 		return "Meteora_DLMM_Program"
 	case amm.Equals(METEORA_DAMM_V2):
 		return "Meteora_DAMM_V2"

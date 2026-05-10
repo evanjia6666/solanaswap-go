@@ -77,6 +77,7 @@ func (p *Parser) processRaydSwaps(router solana.PublicKey, instructionIndex int,
 			pID := p.allAccountKeys[innerInstruction.ProgramIDIndex]
 			if pID.Equals(RAYDIUM_CPMM_PROGRAM_ID) || pID.Equals(RAYDIUM_V4_PROGRAM_ID) || pID.Equals(RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID) {
 				tx := &TxInfo{}
+				tx.Type = TxTypeSwap
 				tx.Router = router
 				tx.Amm = pID
 				tx.Owner = *p.txInfo.Message.Signers().Last()
@@ -356,7 +357,8 @@ func (p *Parser) isKnownAMM(progID solana.PublicKey) bool {
 		progID.Equals(ZEROFI) ||
 		progID.Equals(HUMIDIDI_PROGRAM_ID) ||
 		progID.Equals(PANCAKE_SWAP_PROGRAM_ID) ||
-		progID.Equals(PHOENIX_PROGRAM_ID)
+		progID.Equals(PHOENIX_PROGRAM_ID) ||
+		progID.Equals(MANIFEST_PROGRAM_ID)
 }
 
 func (p *Parser) processTransfer(instr solana.CompiledInstruction) *TransferData {
@@ -462,6 +464,7 @@ func (p *Parser) processGeneralRouter(instructionIndex int) []SwapData {
 
 		if len(innerInstruction.Data) > 8 && swapDiscriminator[hex.EncodeToString(innerInstruction.Data[:8])] == true {
 			tx := &TxInfo{}
+			tx.Type = TxTypeSwap
 			tx.Router = router
 			tx.Amm = pID
 			tx.Owner = *p.txInfo.Message.Signers().Last()
