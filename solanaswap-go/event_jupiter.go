@@ -343,13 +343,13 @@ func parseJupiterEvents(events []SwapData) (*SwapInfo, error) {
 	}
 
 	swapInfo := &SwapInfo{
-		AMMs:              amms,
-		TokenInMint:       firstSwap.InputMint,
-		TokenInAmount:     totalInputAmount,
-		TokenInDecimals:   firstSwap.InputMintDecimals,
-		TokenOutMint:      firstSwap.OutputMint,
-		TokenOutAmount:    totalOutputAmount,
-		TokenOutDecimals:  firstSwap.OutputMintDecimals,
+		AMMs:             amms,
+		TokenInMint:      firstSwap.InputMint,
+		TokenInAmount:    totalInputAmount,
+		TokenInDecimals:  firstSwap.InputMintDecimals,
+		TokenOutMint:     firstSwap.OutputMint,
+		TokenOutAmount:   totalOutputAmount,
+		TokenOutDecimals: firstSwap.OutputMintDecimals,
 	}
 
 	return swapInfo, nil
@@ -373,38 +373,10 @@ func (p *Parser) parseJupiterTxInfo(eventData *JupiterSwapEventData, instr rpc.I
 }
 
 func protocolFromAMM(amm solana.PublicKey) string {
-	switch {
-	case amm.Equals(solana.PublicKey{}):
+	if amm.IsZero() {
 		return string(JUPITER)
-	case amm.Equals(RAYDIUM_V4_PROGRAM_ID) ||
-		amm.Equals(RAYDIUM_CPMM_PROGRAM_ID) ||
-		amm.Equals(RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID) ||
-		amm.Equals(RAYDIUM_LAUNCHLAB_PROGRAM_ID):
-		return "Raydium"
-	case amm.Equals(ORCA_PROGRAM_ID):
-		return "Orca"
-	case amm.Equals(METEORA_PROGRAM_ID):
-		return "Meteora_DLMM_Program"
-	case amm.Equals(METEORA_POOLS_PROGRAM_ID):
-		return "Meteora Pools Program"
-	case amm.Equals(METEORA_DLMM_PROGRAM_ID) ||
-		amm.Equals(METEORA_DLMM_REALQ_PROGRAM_ID):
-		return "Meteora_DLMM_Program"
-	case amm.Equals(METEORA_DAMM_V2):
-		return "Meteora_DAMM_V2"
-	case amm.Equals(Meteora_Dynamic_Bonding_Curve_Program):
-		return "Meteora Dynamic Bonding Curve"
-	case amm.Equals(PUMPFUN_AMM_PROGRAM_ID):
-		return "PumpFun.AMM"
-	case amm.Equals(ZEROFI):
-		return "ZeroFi"
-	case amm.Equals(MANIFEST_PROGRAM_ID):
-		return "Manifest"
-	case amm.Equals(HUMIDIDI_PROGRAM_ID):
-		return "HumidiFi"
-	default:
-		return amm.String()
 	}
+	return ProtocolName(amm)
 }
 
 func (p *Parser) extractAccountPostBalance() error {

@@ -2,8 +2,11 @@ package solanaswapgo
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 
+	ag_binary "github.com/gagliardetto/binary"
+	"github.com/gagliardetto/solana-go"
 	"github.com/mr-tron/base58"
 )
 
@@ -16,13 +19,255 @@ var (
 	OKX_SWAP_TOB_V3_DISCRIMINATOR          = [8]byte{14, 191, 44, 246, 142, 225, 224, 157}
 )
 
+type OKXDex uint8
+
+const (
+	OKXDexSplTokenSwap        OKXDex = 0
+	OKXDexStableSwap          OKXDex = 1
+	OKXDexWhirlpool           OKXDex = 2
+	OKXDexMeteoraDynamicpool  OKXDex = 3
+	OKXDexRaydiumSwap         OKXDex = 4
+	OKXDexRaydiumStableSwap   OKXDex = 5
+	OKXDexRaydiumClmmSwap     OKXDex = 6
+	OKXDexAldrinExchangeV1    OKXDex = 7
+	OKXDexAldrinExchangeV2    OKXDex = 8
+	OKXDexLifinityV1          OKXDex = 9
+	OKXDexLifinityV2          OKXDex = 10
+	OKXDexRaydiumClmmSwapV2   OKXDex = 11
+	OKXDexFluxBeam            OKXDex = 12
+	OKXDexMeteoraDlmm         OKXDex = 13
+	OKXDexRaydiumCpmmSwap     OKXDex = 14
+	OKXDexOpenBookV2          OKXDex = 15
+	OKXDexWhirlpoolV2         OKXDex = 16
+	OKXDexPhoenix             OKXDex = 17
+	OKXDexObricV2             OKXDex = 18
+	OKXDexSanctumAddLiq       OKXDex = 19
+	OKXDexSanctumRemoveLiq    OKXDex = 20
+	OKXDexSanctumNonWsolSwap  OKXDex = 21
+	OKXDexSanctumWsolSwap     OKXDex = 22
+	OKXDexPumpfunBuy          OKXDex = 23
+	OKXDexPumpfunSell         OKXDex = 24
+	OKXDexStabbleSwap         OKXDex = 25
+	OKXDexSanctumRouter       OKXDex = 26
+	OKXDexZerofi              OKXDex = 33
+	OKXDexPumpfunammBuy       OKXDex = 34
+	OKXDexPumpfunammSell      OKXDex = 35
+	OKXDexMeteoraDlmmSwap2    OKXDex = 46
+	OKXDexMeteoraDAMMV2       OKXDex = 47
+	OKXDexManifest            OKXDex = 59
+	OKXDexByreal              OKXDex = 60
+	OKXDexPancakeSwapV3Swap   OKXDex = 61
+	OKXDexPancakeSwapV3SwapV2 OKXDex = 62
+	OKXDexHumidifi            OKXDex = 65
+	OKXDexPumpfunammBuy2      OKXDex = 112
+	OKXDexPumpfunammSell2     OKXDex = 113
+)
+
+func (d OKXDex) String() string {
+	switch d {
+	case OKXDexWhirlpool, OKXDexWhirlpoolV2:
+		return "Whirlpools Program"
+	case OKXDexRaydiumSwap, OKXDexRaydiumCpmmSwap:
+		return "Raydium"
+	case OKXDexRaydiumClmmSwap, OKXDexRaydiumClmmSwapV2:
+		return "Raydium Concentrated Liquidity"
+	case OKXDexMeteoraDynamicpool:
+		return "Meteora Dynamic Pool"
+	case OKXDexMeteoraDlmm, OKXDexMeteoraDlmmSwap2, OKXDexMeteoraDAMMV2:
+		return "Meteora_DLMM_Program"
+	case OKXDexSplTokenSwap:
+		return "SPL Token Swap"
+	case OKXDexStableSwap, OKXDexStabbleSwap:
+		return "Stable Swap"
+	case OKXDexRaydiumStableSwap:
+		return "Raydium Stable Swap"
+	case OKXDexAldrinExchangeV1:
+		return "Aldrin V1"
+	case OKXDexAldrinExchangeV2:
+		return "Aldrin V2"
+	case OKXDexManifest:
+		return "Manifest"
+	case OKXDexHumidifi:
+		return "HumidiFi"
+	case OKXDexZerofi:
+		return "ZeroFi"
+	case OKXDexPhoenix:
+		return "Phoenix"
+	case OKXDexPancakeSwapV3Swap, OKXDexPancakeSwapV3SwapV2:
+		return "Pancake Swap"
+	case OKXDexPumpfunBuy, OKXDexPumpfunSell, OKXDexPumpfunammBuy, OKXDexPumpfunammSell, OKXDexPumpfunammBuy2, OKXDexPumpfunammSell2:
+		return "PumpFun.AMM"
+	case OKXDexOpenBookV2:
+		return "OpenBook V2"
+	case OKXDexByreal:
+		return "Byreal CLMM"
+	default:
+		return fmt.Sprintf("OKX DEX %d", d)
+	}
+}
+
+type OKXLabs2SwapEvent struct {
+	Dex       OKXDex
+	AmountIn  uint64
+	AmountOut uint64
+}
+
+func parseOKXLabs2SwapEvent(data []byte) (*OKXLabs2SwapEvent, error) {
+	decoder := ag_binary.NewBorshDecoder(data)
+	var event OKXLabs2SwapEvent
+	if err := decoder.Decode(&event); err != nil {
+		return nil, err
+	}
+	return &event, nil
+}
+
+func transferAmount(data []byte) uint64 {
+	if len(data) < 9 {
+		return 0
+	}
+	return binary.LittleEndian.Uint64(data[1:9])
+}
+
+func amountsMatch(a, b uint64) bool {
+	if a == b {
+		return true
+	}
+	diff := a
+	if b > a {
+		diff = b - a
+	} else {
+		diff = a - b
+	}
+	return diff <= 2
+}
+
+func (p *Parser) processOKXLabs2SwapEvents(instructionIndex int) []SwapData {
+	var swaps []SwapData
+	innerInstructions := p.getInnerInstructions(instructionIndex)
+	if len(innerInstructions) == 0 {
+		return swaps
+	}
+
+	var swapEvents []struct {
+		data  *OKXLabs2SwapEvent
+		index int
+	}
+	for i, inner := range innerInstructions {
+		progID := p.allAccountKeys[inner.ProgramIDIndex]
+		if !progID.Equals(OKX_LABS_2_PROGRAM_ID) {
+			continue
+		}
+		data, err := base58.Decode(inner.Data.String())
+		if err != nil || len(data) < 16 {
+			continue
+		}
+		if !bytes.Equal(data[:8], AnchorSelfCPIDiscriminator[:]) {
+			continue
+		}
+		if bytes.Equal(data[8:16], SwapEventDiscriminator[:]) {
+			event, err := parseOKXLabs2SwapEvent(data[16:])
+			if err == nil {
+				swapEvents = append(swapEvents, struct {
+					data  *OKXLabs2SwapEvent
+					index int
+				}{event, i})
+			}
+		}
+	}
+
+	for _, se := range swapEvents {
+		tx := &TxInfo{}
+		tx.Type = TxTypeSwap
+		tx.Amm = solana.PublicKey{}
+		tx.Protocol = se.data.Dex.String()
+		tx.InputAmount = se.data.AmountIn
+		tx.OutputAmount = se.data.AmountOut
+		tx.Router = OKX_LABS_2_PROGRAM_ID
+
+		prevBoundary := -1
+		for j := se.index - 1; j >= 0; j-- {
+			if p.allAccountKeys[innerInstructions[j].ProgramIDIndex].Equals(OKX_LABS_2_PROGRAM_ID) {
+				prevBoundary = j
+				break
+			}
+		}
+
+		var inputMint, outputMint string
+		var ammInstr *solana.CompiledInstruction
+		for j := prevBoundary + 1; j < se.index; j++ {
+			inner := innerInstructions[j]
+			if inner.ProgramIDIndex >= uint16(len(p.allAccountKeys)) {
+				continue
+			}
+			innerProgID := p.allAccountKeys[inner.ProgramIDIndex]
+
+			if innerProgID.Equals(solana.TokenProgramID) || innerProgID.Equals(solana.Token2022ProgramID) {
+				if len(inner.Data) == 0 || (inner.Data[0] != 3 && inner.Data[0] != 12) {
+					continue
+				}
+				amt := transferAmount(inner.Data)
+
+				mint := p.splTokenInfoMap[p.allAccountKeys[inner.Accounts[0]].String()].Mint
+				if mint == "" {
+					mint = p.splTokenInfoMap[p.allAccountKeys[inner.Accounts[1]].String()].Mint
+				}
+				if mint == "" {
+					continue
+				}
+
+				if amountsMatch(amt, se.data.AmountIn) {
+					inputMint = mint
+				}
+				if amountsMatch(amt, se.data.AmountOut) {
+					outputMint = mint
+				}
+			} else if ammInstr == nil && !innerProgID.Equals(solana.SystemProgramID) {
+				if len(inner.Data) < 8 || !bytes.Equal(inner.Data[:8], AnchorSelfCPIDiscriminator[:]) {
+					cp := inner
+					ammInstr = &cp
+				}
+			}
+		}
+
+		if inputMint != "" {
+			tx.InputMint = solana.MustPublicKeyFromBase58(inputMint)
+			if dec, ok := p.splDecimalsMap[inputMint]; ok {
+				tx.InputMintDecimals = dec
+			}
+		}
+		if outputMint != "" {
+			tx.OutputMint = solana.MustPublicKeyFromBase58(outputMint)
+			if dec, ok := p.splDecimalsMap[outputMint]; ok {
+				tx.OutputMintDecimals = dec
+			}
+		}
+
+		if ammInstr != nil {
+			ammProgID := p.allAccountKeys[ammInstr.ProgramIDIndex]
+			protocol := tx.Protocol
+			p.setTxPoolInfo(ammProgID, tx, *ammInstr)
+			tx.Protocol = protocol
+			tx.Amm = ammProgID
+		}
+
+		tx.Owner = *p.txInfo.Message.Signers().Last()
+		tx.Index = uint(instructionIndex*256) + uint(se.index)
+		swaps = append(swaps, SwapData{Type: OKX, Data: se.data, Tx: tx})
+	}
+
+	if len(swaps) == 0 {
+		return p.processOKXRouterSwaps(instructionIndex)
+	}
+	return swaps
+}
+
 func (p *Parser) processOKXSwaps(instructionIndex int) []SwapData {
 	// p.Log.Infof("starting okx swap parsing for instruction index: %d", instructionIndex)
 
 	parentInstruction := p.txInfo.Message.Instructions[instructionIndex]
 	programID := p.allAccountKeys[parentInstruction.ProgramIDIndex]
 
-	if !programID.Equals(OKX_DEX_ROUTER_PROGRAM_ID) {
+	if !programID.Equals(OKX_LABS_1_PROGRAM_ID) {
 		p.Log.Warnf("instruction %d skipped: not okx dex router program", instructionIndex)
 		return nil
 	}
@@ -128,6 +373,7 @@ func (p *Parser) processOKXRouterSwaps(instructionIndex int) []SwapData {
 		case progID.Equals(METEORA_PROGRAM_ID) ||
 			progID.Equals(METEORA_POOLS_PROGRAM_ID) ||
 			progID.Equals(METEORA_DLMM_PROGRAM_ID) ||
+			progID.Equals(BYREAL_CLMM_PROGRAM_ID) ||
 			progID.Equals(METEORA_DAMM_V2):
 			// if processedProtocols[METEORA] {
 			// 	continue

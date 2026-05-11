@@ -350,6 +350,7 @@ func (p *Parser) isKnownAMM(progID solana.PublicKey) bool {
 		progID.Equals(METEORA_PROGRAM_ID) ||
 		progID.Equals(METEORA_POOLS_PROGRAM_ID) ||
 		progID.Equals(METEORA_DLMM_PROGRAM_ID) ||
+		progID.Equals(BYREAL_CLMM_PROGRAM_ID) ||
 		progID.Equals(METEORA_DAMM_V2) ||
 		progID.Equals(Meteora_Dynamic_Bonding_Curve_Program) ||
 		progID.Equals(PUMPFUN_AMM_PROGRAM_ID) ||

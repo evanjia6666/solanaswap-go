@@ -37,7 +37,6 @@ var routerPrograms = []solana.PublicKey{
 	BITGET_DEX_AGGREGATOR_PROGRAM_ID,
 	BINANCE_WALLET_PROGRAM_ID,
 	AXIOM_TRADE_PROGRAM_ID,
-	OKX_LABS_2_PROGRAM_ID,
 	ARBITRAGE_BOT_3S1R_PROGRAM_ID,
 	ARBITRAGE_BOT_B7QNN_PROGRAM_ID,
 	solana.MustPublicKeyFromBase58("AP51WLiiqTdbZfgyRMs35PsZpdmLuPDdHYmrB23pEtMU"),
@@ -70,7 +69,7 @@ type Parser struct {
 }
 
 var (
-		swapDiscriminator = map[string]bool{
+	swapDiscriminator = map[string]bool{
 		calculateDiscriminator("global:swap"):                   true,
 		calculateDiscriminator("global:swap_exact_out"):         true,
 		calculateDiscriminator("global:swap_exact_in"):          true,
@@ -84,6 +83,8 @@ var (
 		calculateDiscriminator("global:redeem_v0"):              true,
 		calculateDiscriminator("global:sell"):                   true, // pumpfun AMM
 		calculateDiscriminator("global:buy"):                    true, // pumpfun AMM
+		calculateDiscriminator("global:buy_exact_quote_in"):     true, // pumpfun AMM
+		calculateDiscriminator("global:sell_exact_in"):          true, // pumpfun AMM
 		calculateDiscriminator("global:swap2"):                  true, // meteora dlmm
 		calculateDiscriminator("global:route_v2"):               true, // raydium cl (via jupiter)
 	}
@@ -180,16 +181,19 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 		case progID.Equals(MOONSHOT_PROGRAM_ID):
 			skip = true
 			parsedSwaps = append(parsedSwaps, p.processMoonshotSwaps()...)
+		case progID.Equals(OKX_LABS_1_PROGRAM_ID):
+			skip = true
+			parsedSwaps = append(parsedSwaps, p.processOKXSwaps(i)...)
+		case progID.Equals(OKX_LABS_2_PROGRAM_ID):
+			skip = true
+			parsedSwaps = append(parsedSwaps, p.processOKXLabs2SwapEvents(i)...)
+		case progID.Equals(RAYDIUM_AMM_ROUTER_PROGRAM_ID):
+			skip = true
+			parsedSwaps = append(parsedSwaps, p.processRaydSwaps(RAYDIUM_AMM_ROUTER_PROGRAM_ID, i, 0, &outerInstruction, true)...)
 		case isRouterProgram(progID):
 			if innerSwaps := p.processRouterSwaps(i); len(innerSwaps) > 0 {
 				parsedSwaps = append(parsedSwaps, innerSwaps...)
 			}
-		case progID.Equals(OKX_DEX_ROUTER_PROGRAM_ID):
-			skip = true
-			parsedSwaps = append(parsedSwaps, p.processOKXSwaps(i)...)
-		case progID.Equals(RAYDIUM_AMM_ROUTER_PROGRAM_ID):
-			skip = true
-			parsedSwaps = append(parsedSwaps, p.processRaydSwaps(RAYDIUM_AMM_ROUTER_PROGRAM_ID, i, 0, &outerInstruction, true)...)
 		}
 	}
 	if skip {
@@ -208,7 +212,7 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 		case progID.Equals(ORCA_PROGRAM_ID):
 			parsedSwaps = append(parsedSwaps, p.processOrcaSwaps(i)...)
 		case progID.Equals(METEORA_PROGRAM_ID) || progID.Equals(METEORA_POOLS_PROGRAM_ID) || progID.Equals(METEORA_DLMM_PROGRAM_ID) ||
-			progID.Equals(METEORA_DLMM_REALQ_PROGRAM_ID) ||
+			progID.Equals(BYREAL_CLMM_PROGRAM_ID) ||
 			progID.Equals(Meteora_Dynamic_Bonding_Curve_Program) ||
 			progID.Equals(METEORA_DAMM_V2):
 			meteoraSwaps := p.processMeteoraSwaps(progID, i, 0, false)
@@ -531,6 +535,7 @@ func (p *Parser) processRouterSwaps(instructionIndex int) []SwapData {
 		case (progID.Equals(METEORA_PROGRAM_ID) ||
 			progID.Equals(METEORA_POOLS_PROGRAM_ID) ||
 			progID.Equals(METEORA_DLMM_PROGRAM_ID) ||
+			progID.Equals(BYREAL_CLMM_PROGRAM_ID) ||
 			progID.Equals(METEORA_DAMM_V2)) && !processedProtocols[PROTOCOL_METEORA]:
 			processedProtocols[PROTOCOL_METEORA] = true
 			if meteoraSwaps := p.processMeteoraSwaps(progID, instructionIndex, idx, true); len(meteoraSwaps) > 0 {
@@ -728,7 +733,8 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 			{3},   // sell
 			{250}, // swap (0xfa)
 		}
-	case progID.Equals(METEORA_PROGRAM_ID):
+	case progID.Equals(METEORA_PROGRAM_ID) ||
+		progID.Equals(METEORA_DLMM_PROGRAM_ID):
 		poolAccountIndex = 0
 		poolInAccountIndex = 2
 		poolOutAccountIndex = 3
@@ -760,6 +766,11 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 				}
 			}
 		}
+	case progID.Equals(BYREAL_CLMM_PROGRAM_ID):
+		poolAccountIndex = 2
+		poolInAccountIndex = 5
+		poolOutAccountIndex = 6
+		protocol = "Byreal CLMM"
 	case pid == "swapFpHZwjELNnjvThjajtiVmkz3yPQEHjLtka2fwHW":
 		poolAccountIndex = 6
 		poolInAccountIndex = 3
@@ -968,6 +979,20 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 		poolInAccountIndex = 5
 		poolOutAccountIndex = 6
 		protocol = "PancakeSwap"
+	case progID.Equals(MANIFEST_PROGRAM_ID):
+		poolAccountIndex = 2
+		poolInAccountIndex = 6
+		poolOutAccountIndex = 7
+		protocol = "Manifest"
+		discriminatorLen = 1
+		discriminatorWhiteList = [][]byte{
+			{4},
+			{13},
+		}
+		if int(poolAccountIndex) < len(instruction.Accounts) && p.allAccountKeys[instruction.Accounts[poolAccountIndex]].Equals(solana.SystemProgramID) {
+			poolAccountIndex = 1
+			poolOutAccountIndex = 5
+		}
 	case progID.Equals(HUMIDIDI_PROGRAM_ID):
 		poolAccountIndex = 1
 		poolInAccountIndex = 2

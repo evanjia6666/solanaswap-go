@@ -11,11 +11,11 @@ var (
 	THREE_Q_ROUTER_PROGRAM_ID = solana.MustPublicKeyFromBase58("3q9RnxufDcorEPAmCeZumn8kveC832rYYmZSk5tcaCzM")
 
 	// Trading Bots
-	BANANA_GUN_PROGRAM_ID = solana.MustPublicKeyFromBase58("BANANAjs7FJiPQqJTGFzkZJndT9o7UmKiYYGaJz6frGu")
-	MINTECH_PROGRAM_ID    = solana.MustPublicKeyFromBase58("minTcHYRLVPubRK8nt6sqe2ZpWrGDLQoNLipDJCGocY")
-	BLOOM_PROGRAM_ID      = solana.MustPublicKeyFromBase58("b1oomGGqPKGD6errbyfbVMBuzSC8WtAAYo8MwNafWW1")
-	MAESTRO_PROGRAM_ID    = solana.MustPublicKeyFromBase58("MaestroAAe9ge5HTc64VbBQZ6fP77pwvrhM8i1XWSAx")
-	NOVA_PROGRAM_ID       = solana.MustPublicKeyFromBase58("NoVA1TmDUqksaj2hB1nayFkPysjJbFiU76dT4qPw2wm")
+	BANANA_GUN_PROGRAM_ID         = solana.MustPublicKeyFromBase58("BANANAjs7FJiPQqJTGFzkZJndT9o7UmKiYYGaJz6frGu")
+	MINTECH_PROGRAM_ID            = solana.MustPublicKeyFromBase58("minTcHYRLVPubRK8nt6sqe2ZpWrGDLQoNLipDJCGocY")
+	BLOOM_PROGRAM_ID              = solana.MustPublicKeyFromBase58("b1oomGGqPKGD6errbyfbVMBuzSC8WtAAYo8MwNafWW1")
+	MAESTRO_PROGRAM_ID            = solana.MustPublicKeyFromBase58("MaestroAAe9ge5HTc64VbBQZ6fP77pwvrhM8i1XWSAx")
+	NOVA_PROGRAM_ID               = solana.MustPublicKeyFromBase58("NoVA1TmDUqksaj2hB1nayFkPysjJbFiU76dT4qPw2wm")
 	ARBITRAGE_BOT_3S1R_PROGRAM_ID = solana.MustPublicKeyFromBase58("3s1rAymURnacreXreMy718GfqW6kygQsLNka1xDyW8pC")
 
 	RAYDIUM_V4_PROGRAM_ID                     = solana.MustPublicKeyFromBase58("675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8")
@@ -28,7 +28,7 @@ var (
 	METEORA_PROGRAM_ID                    = solana.MustPublicKeyFromBase58("LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo")
 	METEORA_POOLS_PROGRAM_ID              = solana.MustPublicKeyFromBase58("Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB")
 	METEORA_DLMM_PROGRAM_ID               = solana.MustPublicKeyFromBase58("King7ki4SKMBPb3iupnQwTyjsq294jaXsgLmJo8cb7T")
-	METEORA_DLMM_REALQ_PROGRAM_ID         = solana.MustPublicKeyFromBase58("REALQqNEomY6cQGZJUGwywTBD2UmDT32rZcNnfxQ5N2")
+	BYREAL_CLMM_PROGRAM_ID                = solana.MustPublicKeyFromBase58("REALQqNEomY6cQGZJUGwywTBD2UmDT32rZcNnfxQ5N2")
 	PFEE_PROGRAM_ID                       = solana.MustPublicKeyFromBase58("pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ")
 	METEORA_DAMM_V2                       = solana.MustPublicKeyFromBase58("cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG")
 	ZEROFI                                = solana.MustPublicKeyFromBase58("ZERor4xhbUycZ6gb9ntrhqscUcZmAbQDjEAtCf4hbZY")
@@ -43,30 +43,30 @@ var (
 	TESSERA_V_PROGRAM_ID                  = solana.MustPublicKeyFromBase58("TessVdML9pBGgG9yGks7o4HewRaXVAMuoVj4x83GLQH") // TODO
 	// solana.MustPublicKeyFromBase58("E4CKSsnjU9WXzrBJpNXnFi4gbb1kmLuavwZHd35TLeHs")
 
-	MOONSHOT_PROGRAM_ID       = solana.MustPublicKeyFromBase58("MoonCVVNZFSYkqNXP6bxHLPL6QQJiMagDL3qcqUQTrG")
-	ORCA_PROGRAM_ID           = solana.MustPublicKeyFromBase58("whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc")
-	OKX_DEX_ROUTER_PROGRAM_ID = solana.MustPublicKeyFromBase58("6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma")
-	PUMPFUN_AMM_PROGRAM_ID    = solana.MustPublicKeyFromBase58("pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA")
-	MANIFEST_PROGRAM_ID       = solana.MustPublicKeyFromBase58("MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms")
+	MOONSHOT_PROGRAM_ID    = solana.MustPublicKeyFromBase58("MoonCVVNZFSYkqNXP6bxHLPL6QQJiMagDL3qcqUQTrG")
+	ORCA_PROGRAM_ID        = solana.MustPublicKeyFromBase58("whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc")
+	OKX_LABS_1_PROGRAM_ID  = solana.MustPublicKeyFromBase58("6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma")
+	PUMPFUN_AMM_PROGRAM_ID = solana.MustPublicKeyFromBase58("pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA")
+	MANIFEST_PROGRAM_ID    = solana.MustPublicKeyFromBase58("MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms")
 
 	NATIVE_SOL_MINT_PROGRAM_ID = solana.MustPublicKeyFromBase58("So11111111111111111111111111111111111111112")
-	Token2022ProgramID           = solana.MustPublicKeyFromBase58("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb")
+	Token2022ProgramID         = solana.MustPublicKeyFromBase58("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb")
 )
 
 type SwapType string
 
 const (
-	PUMP_FUN SwapType = "PumpFun.AMM"
-	JUPITER  SwapType = "Jupiter"
-	RAYDIUM  SwapType = "Raydium"
-	OKX      SwapType = "OKX"
-	ORCA     SwapType = "Orca"
-	METEORA  SwapType = "Meteora"
-	MOONSHOT SwapType = "Moonshot"
+	PUMP_FUN    SwapType = "PumpFun.AMM"
+	JUPITER     SwapType = "Jupiter"
+	RAYDIUM     SwapType = "Raydium"
+	OKX         SwapType = "OKX"
+	ORCA        SwapType = "Orca"
+	METEORA     SwapType = "Meteora"
+	MOONSHOT    SwapType = "Moonshot"
 	ZEROFI_SWAP SwapType = "ZeroFi"
 	HUMIDIDI    SwapType = "HumidiFi"
 	MANIFEST    SwapType = "Manifest"
-	UNKNOWN  SwapType = "Unknown"
+	UNKNOWN     SwapType = "Unknown"
 )
 
 const (

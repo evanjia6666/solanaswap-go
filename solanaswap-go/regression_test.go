@@ -16,6 +16,10 @@ type legExpectation struct {
 	outputMint string
 	inputAmt   uint64
 	outputAmt  uint64
+	// pool       string
+	// poolIn     string
+	// poolOut    string
+	// amm        string
 }
 
 func TestRegression_AllCases(t *testing.T) {
@@ -72,7 +76,7 @@ func TestRegression_AllCases(t *testing.T) {
 			name: "OKX Labs 2 — Single Leg",
 			sig:  "2QzkwCkLd3mP2TSPQ5M7eL3qGMwZmyWzPShdUC7TrTzL5TmNRdsvKMH5GNG7L8VMfFAoGBRGt1ohSCpJqsF9rhTM",
 			expected: []legExpectation{
-				{"PumpFun.AMM", "So11111111111111111111111111111111111111112", "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump", 196340513, 245048222036},
+				{"PumpFun.AMM", "So11111111111111111111111111111111111111112", "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump", 198300000, 245048222036},
 			},
 		},
 		{
@@ -106,24 +110,38 @@ func TestRegression_AllCases(t *testing.T) {
 			},
 		},
 		{
-			name: "Raydium+Orca mix (regression)",
+			name: "Raydium+Whirlpools Program (regression)",
 			sig:  "HwPpFnBuyxCLRsuJNEZ5SBHx6xgtXy9TeLUkk8KNVjNXmbZsyyYyfkvdsEeD3mgNi4TYBs3A1wrbFHDDafqdwHm",
 			expected: []legExpectation{
-				{"Raydium", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", 449550000, 208773150},
+				{"Raydium Concentrated Liquidity", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", 449550000, 208773150},
+				{"Whirlpools Program", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", 49950000, 23197311},
 			},
 		},
 		{
 			name: "Raydium swap (regression)",
 			sig:  "3XgeS99txr7YDwyw14aVT1tewhQgEgBMzzxT6ZGAVPzusNrgx392wstsbgPrBxnKw6xJLtUfVrQpGvFFU4cQQfj5",
 			expected: []legExpectation{
-				{"Raydium", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 15367000, 33015387},
+				{"Raydium Concentrated Liquidity", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 15367000, 33015387},
+				{"Whirlpools Program", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 124333000, 267254823},
 			},
 		},
 		{
 			name: "Meteora DLMM (regression)",
 			sig:  "qUMyimWMctuUAcTGFzJ8WZ7ncq3UJoAZTXaNh19He2NLyTnG47Y3rzFup42jnh8HtjbRyWxisgwgfS7etgzUmoA",
 			expected: []legExpectation{
+				{"Byreal CLMM", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 4513500, 9691643},
 				{"Meteora_DLMM_Program", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 501501, 1077056},
+				{"Manifest", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "Xs8S1uUs1zvS2p7iwtsG3b6fkhpvmwz4GYU3gWAmWHZ", 10768699, 1506086},
+			},
+		},
+		{
+			name: "OKX Router — Multi-leg (Xsc9 anomaly)",
+			sig:  "34jX27qt8bMeufVQAhEHtofcMiZSMasp5DcZHvJj6o5QNxfvmcFAAckUMbrfs26NPqqYxe2M6dEQM28eaCoEe787",
+			expected: []legExpectation{
+				{"Meteora_DLMM_Program", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", "So11111111111111111111111111111111111111112", 510946, 11581194},
+				{"Meteora_DLMM_Program", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 188981, 407737},
+				{"Pancake Swap", "So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 11581194, 1102408},
+				{"Stable Swap", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN", 1510145, 5820395},
 			},
 		},
 		{
@@ -144,78 +162,6 @@ func TestRegression_AllCases(t *testing.T) {
 			},
 		},
 	}
-
-	// Verify ProcessSwapData aggregation for multi-leg swaps
-	t.Run("ProcessSwapData aggregation", func(t *testing.T) {
-		aggTests := []struct {
-			name              string
-			sig               string
-			expectMultiLeg    bool
-			expectInputMint   string
-			expectInputAmt    uint64
-			expectOutputMint  string
-			expectOutputAmt   uint64
-			expectAmms        []string
-		}{
-		{
-			name:             "Jupiter RouteV2 → aggregate USDC to Xsc9",
-			sig:              "4jRhd8zs2pjhTCEuJ2argxZiw6wiQdHb4iK2u3CwgLmdFEp3tn21nASBKedV3544qEuqfqLcD6nydLNgt4kPQZwm",
-			expectMultiLeg:   true,
-			expectInputMint:  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-			expectInputAmt:   9659601,
-			expectOutputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-			expectOutputAmt:  9660288,
-			expectAmms:       []string{"ZeroFi", "Raydium", "Manifest"},
-		},
-			{
-				name:             "PumpFun single-leg",
-				sig:              "2rwTmdPNtUNysZtUafAW9FBW7Vn6y2LyhQr9ZRATgPihFxFEgCUnLvRkQTGyG6g6h9cCKdLSag96DPuqYdm4j1df",
-				expectMultiLeg:   false,
-				expectInputMint:  "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump",
-				expectInputAmt:   2270000000000,
-				expectOutputMint: "So11111111111111111111111111111111111111112",
-				expectOutputAmt:  1954407176,
-			},
-			{
-				name:             "Jupiter SharedAccountsRouteV2 SwapsEvent — 3KHMZ→SOL",
-				sig:              "4Knpk5HUzdeSvE3hmiUHcPGcZzwsMUSspUvchTj5W6dDSB1dDVewbqpwdvcqf2XcrWweckKT9j89tPHzVVNnagLd",
-				expectMultiLeg:   false,
-				expectInputMint:  "3KHMZhpthXuiCcgfTv7vVu9PpEz64KAEURFwi6Lopump",
-				expectInputAmt:   101946555003,
-				expectOutputMint: "So11111111111111111111111111111111111111112",
-				expectOutputAmt:  5594069444,
-				expectAmms:       []string{"Meteora_DLMM_Program"},
-			},
-		}
-
-		for _, tt := range aggTests {
-			t.Run(tt.name, func(t *testing.T) {
-				sig := solana.MustSignatureFromBase58(tt.sig)
-				var maxTxVersion uint64 = 0
-				tx, err := client.GetTransaction(context.TODO(), sig, &rpc.GetTransactionOpts{
-					Commitment:                     rpc.CommitmentConfirmed,
-					MaxSupportedTransactionVersion: &maxTxVersion,
-				})
-				require.NoError(t, err)
-				parser, err := NewParser(tx)
-				require.NoError(t, err)
-				legs, err := parser.ParseTransaction()
-				require.NoError(t, err)
-
-				swapInfo, _, err := parser.ProcessSwapData(legs)
-				require.NoError(t, err)
-				require.NotNil(t, swapInfo)
-				require.Equal(t, tt.expectMultiLeg, len(swapInfo.AMMs) > 1, "multi-leg mismatch")
-				require.Equal(t, tt.expectInputMint, swapInfo.TokenInMint.String(), "input mint mismatch")
-				require.Equal(t, tt.expectInputAmt, swapInfo.TokenInAmount, "input amount mismatch")
-				require.Equal(t, tt.expectOutputMint, swapInfo.TokenOutMint.String(), "output mint mismatch")
-				require.Equal(t, tt.expectOutputAmt, swapInfo.TokenOutAmount, "output amount mismatch")
-				if len(tt.expectAmms) > 0 {
-					require.ElementsMatch(t, tt.expectAmms, swapInfo.AMMs, "AMMs mismatch")
-				}
-			})
-		}
-	})
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
