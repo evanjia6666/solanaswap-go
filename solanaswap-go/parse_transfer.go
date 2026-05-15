@@ -114,7 +114,7 @@ func (p *Parser) processRaydSwaps(router solana.PublicKey, instructionIndex int,
 						}
 
 						if tx.InputMint.Equals(solana.MustPublicKeyFromBase58(transfer.Mint)) {
-							tx.InputAmount = transfer.Info.Amount
+							// Input already set, skip subsequent transfers of the same mint
 							continue
 						}
 
@@ -132,7 +132,7 @@ func (p *Parser) processRaydSwaps(router solana.PublicKey, instructionIndex int,
 						}
 
 						if tx.InputMint.Equals(solana.MustPublicKeyFromBase58(transfer.Info.Mint)) {
-							tx.InputAmount = uint64(amount)
+							// Input already set, skip subsequent transfers of the same mint
 							continue
 						}
 
@@ -220,7 +220,7 @@ func (p *Parser) parseTransferTxInfo(progId solana.PublicKey, instructionIndex i
 			}
 
 			if tx.InputMint.Equals(solana.MustPublicKeyFromBase58(transfer.Mint)) {
-				tx.InputAmount = transfer.Info.Amount
+				// Input already set, skip subsequent transfers of the same mint
 				continue
 			}
 
@@ -242,7 +242,7 @@ func (p *Parser) parseTransferTxInfo(progId solana.PublicKey, instructionIndex i
 			}
 
 			if tx.InputMint.Equals(solana.MustPublicKeyFromBase58(transfer.Info.Mint)) {
-				tx.InputAmount = uint64(amount)
+				// Input already set, skip subsequent transfers of the same mint
 				continue
 			}
 
