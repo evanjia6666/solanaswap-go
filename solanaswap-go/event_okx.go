@@ -359,7 +359,7 @@ func (p *Parser) processOKXRouterSwaps(instructionIndex int) []SwapData {
 			if processedProtocols[ORCA] {
 				continue
 			}
-			if orcaSwaps := p.processOrcaSwaps(instructionIndex); len(orcaSwaps) > 0 {
+			if orcaSwaps := p.processOrcaSwaps(instructionIndex, &inner); len(orcaSwaps) > 0 {
 				for _, swap := range orcaSwaps {
 					key := getSwapKey(swap)
 					if !seen[key] {

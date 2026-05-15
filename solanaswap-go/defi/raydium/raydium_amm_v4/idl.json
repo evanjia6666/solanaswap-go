@@ -1,0 +1,10 @@
+{
+  "address": "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
+  "metadata": {
+    "name": "raydium_amm_v4",
+    "version": "0.1.0",
+    "description": "Raydium Liquidity Pool V4 - Not Anchor-based, uses custom serialization"
+  },
+  "instructions": [],
+  "note": "Raydium AMM V4 is not an Anchor program. It uses custom Borsh serialization. See raydium-sdk-V2 for instruction layouts."
+}

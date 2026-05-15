@@ -262,7 +262,7 @@ func (p *Parser) parseTransferTxInfo(progId solana.PublicKey, instructionIndex i
 	return
 }
 
-func (p *Parser) processOrcaSwaps(instructionIndex int) []SwapData {
+func (p *Parser) processOrcaSwaps(instructionIndex int, ammInstruction *solana.CompiledInstruction) []SwapData {
 	var swaps []SwapData
 	for _, innerInstructionSet := range p.txMeta.InnerInstructions {
 		if innerInstructionSet.Index == uint16(instructionIndex) {
@@ -275,7 +275,7 @@ func (p *Parser) processOrcaSwaps(instructionIndex int) []SwapData {
 					}
 				}
 			}
-			tx, err := p.parseTransferTxInfo(ORCA_PROGRAM_ID, instructionIndex, ORCA, innerSwaps, nil)
+			tx, err := p.parseTransferTxInfo(ORCA_PROGRAM_ID, instructionIndex, ORCA, innerSwaps, ammInstruction)
 			if err == nil {
 				swaps = append(swaps, SwapData{Type: ORCA, Tx: tx})
 			}

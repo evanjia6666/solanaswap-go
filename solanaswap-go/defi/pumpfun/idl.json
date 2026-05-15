@@ -1,0 +1,10 @@
+{
+  "address": "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",
+  "metadata": {
+    "name": "pump_fun",
+    "version": "0.1.0",
+    "description": "Pump.Fun Token Launch Platform"
+  },
+  "instructions": [],
+  "note": "Not Anchor-based. Uses custom serialization."
+}

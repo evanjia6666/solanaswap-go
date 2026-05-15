@@ -86,6 +86,8 @@ var (
 		calculateDiscriminator("global:buy_exact_quote_in"):     true, // pumpfun AMM
 		calculateDiscriminator("global:sell_exact_in"):          true, // pumpfun AMM
 		calculateDiscriminator("global:swap2"):                  true, // meteora dlmm
+		calculateDiscriminator("global:swap_exact_out2"):        true, // meteora dlmm
+		calculateDiscriminator("global:swap_with_price_impact2"): true, // meteora dlmm
 		calculateDiscriminator("global:route_v2"):               true, // raydium cl (via jupiter)
 	}
 
@@ -210,7 +212,7 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 			progID.Equals(RAYDIUM_LAUNCHLAB_PROGRAM_ID):
 			parsedSwaps = append(parsedSwaps, p.processRaydSwaps(progID, i, 0, &outerInstruction, false)...)
 		case progID.Equals(ORCA_PROGRAM_ID):
-			parsedSwaps = append(parsedSwaps, p.processOrcaSwaps(i)...)
+			parsedSwaps = append(parsedSwaps, p.processOrcaSwaps(i, nil)...)
 		case progID.Equals(METEORA_PROGRAM_ID) || progID.Equals(METEORA_POOLS_PROGRAM_ID) || progID.Equals(METEORA_DLMM_PROGRAM_ID) ||
 			progID.Equals(BYREAL_CLMM_PROGRAM_ID) ||
 			progID.Equals(Meteora_Dynamic_Bonding_Curve_Program) ||
@@ -528,7 +530,7 @@ func (p *Parser) processRouterSwaps(instructionIndex int) []SwapData {
 
 		case progID.Equals(ORCA_PROGRAM_ID) && !processedProtocols[PROTOCOL_ORCA]:
 			processedProtocols[PROTOCOL_ORCA] = true
-			if orcaSwaps := p.processOrcaSwaps(instructionIndex); len(orcaSwaps) > 0 {
+			if orcaSwaps := p.processOrcaSwaps(instructionIndex, &inner); len(orcaSwaps) > 0 {
 				swaps = append(swaps, orcaSwaps...)
 			}
 
@@ -658,23 +660,34 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 			}
 		}
 	case progID.Equals(ORCA_PROGRAM_ID):
-		poolAccountIndex = 2
-		poolInAccountIndex = 4
-		poolOutAccountIndex = 6
-		//fromAccountIndex = 1
-		//toAccountIndex = 2
 		protocol = string(ORCA)
 		if len(instruction.Data) >= discriminatorLen {
-			if _, ok := removeDiscriminator[hex.EncodeToString(instruction.Data[:discriminatorLen])]; ok {
-				tx.Type = TxTypeRemove
-				poolAccountIndex = 0
-				poolInAccountIndex = uint16(len(instruction.Accounts)) - 4
-				poolOutAccountIndex = uint16(len(instruction.Accounts)) - 3
-			} else if _, ok := addDiscriminator[hex.EncodeToString(instruction.Data[:discriminatorLen])]; ok {
-				tx.Type = TxTypeAdd
-				poolAccountIndex = 0
-				poolInAccountIndex = uint16(len(instruction.Accounts)) - 4
-				poolOutAccountIndex = uint16(len(instruction.Accounts)) - 3
+			discHex := hex.EncodeToString(instruction.Data[:discriminatorLen])
+			// swap_v2 discriminator: global:swap_v2 -> 2b04ed0b1ac91e62
+			// swap discriminator: global:swap -> f8c69e91e17587c8
+			switch discHex {
+			case "2b04ed0b1ac91e62":
+				// swap_v2: token_program_a, token_program_b, memo_program, token_authority, whirlpool, token_mint_a, token_mint_b, token_owner_account_a, token_vault_a, token_owner_account_b, token_vault_b, tick_arrays..., oracle
+				poolAccountIndex = 4
+				poolInAccountIndex = 8
+				poolOutAccountIndex = 10
+			case "f8c69e91e17587c8":
+				// swap: token_program, token_authority, whirlpool, token_owner_a, token_vault_a, token_owner_b, token_vault_b, tick_arrays..., oracle
+				poolAccountIndex = 2
+				poolInAccountIndex = 4
+				poolOutAccountIndex = 6
+			default:
+				if _, ok := removeDiscriminator[discHex]; ok {
+					tx.Type = TxTypeRemove
+					poolAccountIndex = 0
+					poolInAccountIndex = uint16(len(instruction.Accounts)) - 4
+					poolOutAccountIndex = uint16(len(instruction.Accounts)) - 3
+				} else if _, ok := addDiscriminator[discHex]; ok {
+					tx.Type = TxTypeAdd
+					poolAccountIndex = 0
+					poolInAccountIndex = uint16(len(instruction.Accounts)) - 4
+					poolOutAccountIndex = uint16(len(instruction.Accounts)) - 3
+				}
 			}
 		}
 	case progID.Equals(RAYDIUM_CPMM_PROGRAM_ID):
@@ -973,6 +986,7 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 		discriminatorLen = 1
 		discriminatorWhiteList = [][]byte{
 			{6},
+			{16},
 		}
 	case progID.Equals(PANCAKE_SWAP_PROGRAM_ID):
 		poolAccountIndex = 2
@@ -1051,43 +1065,39 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 	poolInAccountIndex = instruction.Accounts[poolInAccountIndex]
 	poolOutAccountIndex = instruction.Accounts[poolOutAccountIndex]
 
-	poolInBalance, ok := p.postBalance[poolInAccountIndex]
-	if !ok {
-		err = errors.New("no postBalance for account")
-		return
-	}
-	poolOutBalance, ok := p.postBalance[poolOutAccountIndex]
-	if !ok {
-		err = errors.New("no postBalance for account")
-		return
-	}
-
-	if poolInBalance.Mint.Equals(tx.OutputMint) {
-		poolInAccountIndex, poolOutAccountIndex = poolOutAccountIndex, poolInAccountIndex
-		poolInBalance, poolOutBalance = poolOutBalance, poolInBalance
-	}
-	if !poolInBalance.Mint.Equals(tx.InputMint) {
-		err = errors.New("no inputMint for account")
-		return
-	}
-	if !poolOutBalance.Mint.Equals(tx.OutputMint) {
-		err = errors.New("no outputMint for account")
-		return
-	}
-
 	tx.Pool = p.allAccountKeys[instruction.Accounts[poolAccountIndex]]
 	tx.PoolIn = p.allAccountKeys[poolInAccountIndex]
 	tx.PoolOut = p.allAccountKeys[poolOutAccountIndex]
 
-	if a, err := decimal.NewFromString(poolInBalance.UiTokenAmount.Amount); err == nil {
-		tx.PoolInAmount = a.BigInt()
-	}
-	tx.InputMintDecimals = poolInBalance.UiTokenAmount.Decimals
+	poolInBalance, okIn := p.postBalance[poolInAccountIndex]
+	poolOutBalance, okOut := p.postBalance[poolOutAccountIndex]
 
-	if a, err := decimal.NewFromString(poolOutBalance.UiTokenAmount.Amount); err == nil {
-		tx.PoolOutAmount = a.BigInt()
+	if okIn && okOut {
+		if poolInBalance.Mint.Equals(tx.OutputMint) {
+			poolInAccountIndex, poolOutAccountIndex = poolOutAccountIndex, poolInAccountIndex
+			poolInBalance, poolOutBalance = poolOutBalance, poolInBalance
+			tx.PoolIn = p.allAccountKeys[poolInAccountIndex]
+			tx.PoolOut = p.allAccountKeys[poolOutAccountIndex]
+		}
+		if !poolInBalance.Mint.Equals(tx.InputMint) {
+			err = errors.New("no inputMint for account")
+			return
+		}
+		if !poolOutBalance.Mint.Equals(tx.OutputMint) {
+			err = errors.New("no outputMint for account")
+			return
+		}
+
+		if a, err := decimal.NewFromString(poolInBalance.UiTokenAmount.Amount); err == nil {
+			tx.PoolInAmount = a.BigInt()
+		}
+		tx.InputMintDecimals = poolInBalance.UiTokenAmount.Decimals
+
+		if a, err := decimal.NewFromString(poolOutBalance.UiTokenAmount.Amount); err == nil {
+			tx.PoolOutAmount = a.BigInt()
+		}
+		tx.OutputMintDecimals = poolOutBalance.UiTokenAmount.Decimals
 	}
-	tx.OutputMintDecimals = poolOutBalance.UiTokenAmount.Decimals
 
 	tx.Protocol = protocol
 	return

@@ -60,6 +60,10 @@ func (p *Parser) processJupiterSwaps(instructionIndex int) []SwapData {
 			last := 0
 			inferredAMMs := p.collectAMMsFromInnerInstructions(innerInstructionSet)
 			useSwapsEvent := isSharedAccountsV2 || p.hasUnknownAMMsInInnerInstructions(innerInstructionSet)
+
+			// Collect AMM instructions between Jupiter events for pool info
+			ammInstrs := p.collectAMMInstructionsBetweenEvents(innerInstructionSet)
+
 			for i, innerInstruction := range innerInstructionSet.Instructions {
 				solInstr := p.convertRPCToSolanaInstruction(innerInstruction)
 				if p.isJupiterRouteEventInstruction(solInstr) {
@@ -69,6 +73,7 @@ func (p *Parser) processJupiterSwaps(instructionIndex int) []SwapData {
 					}
 					if eventData != nil {
 						tx := p.parseJupiterTxInfo(eventData, innerInstructionSet, last)
+						p.setPoolInfoFromAMM(tx, ammInstrs, len(swaps))
 						swaps = append(swaps, SwapData{Type: JUPITER, Data: eventData, Tx: tx})
 					}
 					last = i
@@ -77,20 +82,58 @@ func (p *Parser) processJupiterSwaps(instructionIndex int) []SwapData {
 					if err != nil {
 						p.Log.Errorf("error processing SwapsEvent: %s", err)
 					}
-					for ei, eventData := range eventDataList {
-						tx := p.parseJupiterTxInfo(eventData, innerInstructionSet, last)
-						if ei < len(inferredAMMs) {
-							tx.Amm = inferredAMMs[ei]
-							tx.Protocol = protocolFromAMM(inferredAMMs[ei])
-						}
-						swaps = append(swaps, SwapData{Type: JUPITER, Data: eventData, Tx: tx})
+				startIdx := len(swaps)
+				for ei, eventData := range eventDataList {
+					tx := p.parseJupiterTxInfo(eventData, innerInstructionSet, last)
+					if ei < len(inferredAMMs) {
+						tx.Amm = inferredAMMs[ei]
+						tx.Protocol = protocolFromAMM(inferredAMMs[ei])
 					}
+					p.setPoolInfoFromAMM(tx, ammInstrs, startIdx+ei)
+					swaps = append(swaps, SwapData{Type: JUPITER, Data: eventData, Tx: tx})
+				}
 					last = i
 				}
 			}
 		}
 	}
 	return swaps
+}
+
+// collectAMMInstructionsBetweenEvents finds AMM instructions between Jupiter/DFlow events.
+func (p *Parser) collectAMMInstructionsBetweenEvents(innerSet rpc.InnerInstruction) []*solana.CompiledInstruction {
+	var ammInstrs []*solana.CompiledInstruction
+	for _, inner := range innerSet.Instructions {
+		progID := p.allAccountKeys[inner.ProgramIDIndex]
+		if progID.Equals(JUPITER_PROGRAM_ID) || progID.Equals(DFLOW_AGGREGATOR_V4) {
+			continue
+		}
+		if p.isUtilityProgram(progID) {
+			continue
+		}
+		solInstr := p.convertRPCToSolanaInstruction(inner)
+		if len(solInstr.Data) < 8 {
+			continue
+		}
+		if solInstr.Data[0] == AnchorSelfCPIDiscriminator[0] {
+			continue
+		}
+		ammInstrs = append(ammInstrs, &solInstr)
+	}
+	return ammInstrs
+}
+
+// setPoolInfoFromAMM calls setTxPoolInfo for the nth AMM instruction if available.
+func (p *Parser) setPoolInfoFromAMM(tx *TxInfo, ammInstrs []*solana.CompiledInstruction, idx int) {
+	for i := idx; i < len(ammInstrs); i++ {
+		ammInstr := ammInstrs[i]
+		ammProgID := p.allAccountKeys[ammInstr.ProgramIDIndex]
+		err := p.setTxPoolInfo(ammProgID, tx, *ammInstr)
+		if err == nil {
+			return
+		}
+		// If this wasn't a valid swap instruction, try the next one
+	}
 }
 
 func (p *Parser) collectAMMsFromInnerInstructions(innerSet rpc.InnerInstruction) []solana.PublicKey {

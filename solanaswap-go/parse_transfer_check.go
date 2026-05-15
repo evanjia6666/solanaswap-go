@@ -30,6 +30,15 @@ type TransferCheck struct {
 	Type string `json:"type"`
 }
 
+func (p *Parser) isMeteoraDLMMSwap(discriminator []byte) bool {
+	return bytes.Equal(meteoradlmmprogram.Instruction_Swap[:], discriminator) ||
+		bytes.Equal(meteoradlmmprogram.Instruction_Swap2[:], discriminator) ||
+		bytes.Equal(meteoradlmmprogram.Instruction_SwapExactOut[:], discriminator) ||
+		bytes.Equal(meteoradlmmprogram.Instruction_SwapExactOut2[:], discriminator) ||
+		bytes.Equal(meteoradlmmprogram.Instruction_SwapWithPriceImpact[:], discriminator) ||
+		bytes.Equal(meteoradlmmprogram.Instruction_SwapWithPriceImpact2[:], discriminator)
+}
+
 func (p *Parser) processMeteoraSwaps(progID solana.PublicKey, outerIndex int, innerIndex int, isInner bool) []SwapData {
 	if isInner {
 		outerInstriction := p.txInfo.Message.Instructions[outerIndex]
@@ -45,8 +54,8 @@ func (p *Parser) processMeteoraSwaps(progID solana.PublicKey, outerIndex int, in
 				discriminator := inner.Data[:8]
 
 				inProgID := p.allAccountKeys[inner.ProgramIDIndex]
-				if progID.Equals(inProgID) && (bytes.Equal(discriminator, meteora_pools_program.Instruction_Swap[:]) ||
-					bytes.Equal(meteoradlmmprogram.Instruction_Swap2[:], discriminator) || bytes.Equal(meteora_damm_v2.Instruction_Swap[:], discriminator)) {
+			if progID.Equals(inProgID) && (bytes.Equal(discriminator, meteora_pools_program.Instruction_Swap[:]) ||
+				p.isMeteoraDLMMSwap(discriminator) || bytes.Equal(meteora_damm_v2.Instruction_Swap[:], discriminator)) {
 					var innerSwaps []SwapData
 					for _, innerInstruction := range inners[i+1:] {
 						inProgID2 := p.allAccountKeys[innerInstruction.ProgramIDIndex]
@@ -147,7 +156,7 @@ func (p *Parser) processMeteoraSwaps(progID solana.PublicKey, outerIndex int, in
 				return nil
 			}
 			discriminator := outerInstriction.Data[:8]
-			if bytes.Equal(discriminator, meteora_pools_program.Instruction_Swap[:]) || bytes.Equal(meteoradlmmprogram.Instruction_Swap2[:], discriminator) ||
+			if bytes.Equal(discriminator, meteora_pools_program.Instruction_Swap[:]) || p.isMeteoraDLMMSwap(discriminator) ||
 				bytes.Equal(meteora_damm_v2.Instruction_Swap[:], discriminator) {
 				var innerSwaps []SwapData
 				for _, innerInstruction := range inners {

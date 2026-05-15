@@ -1,0 +1,10 @@
+{
+  "address": "Titan111111111111111111111111111111111111111111",
+  "metadata": {
+    "name": "titan_exchange",
+    "version": "0.1.0",
+    "description": "Titan Exchange (placeholder - need correct program ID)"
+  },
+  "instructions": [],
+  "note": "Placeholder - need correct program ID and IDL."
+}

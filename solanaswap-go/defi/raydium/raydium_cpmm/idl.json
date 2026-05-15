@@ -1,0 +1,10 @@
+{
+  "address": "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C",
+  "metadata": {
+    "name": "raydium_cp_swap",
+    "version": "0.1.0",
+    "description": "Raydium Constant Product Market Maker"
+  },
+  "instructions": [],
+  "note": "Anchor-based program. IDL needs to be generated from source."
+}

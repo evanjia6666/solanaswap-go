@@ -1,0 +1,10 @@
+{
+  "address": "Sanctum111111111111111111111111111111111111111",
+  "metadata": {
+    "name": "sanctum",
+    "version": "0.1.0",
+    "description": "Sanctum LST Protocol (placeholder - need correct program ID)"
+  },
+  "instructions": [],
+  "note": "Placeholder - need correct program ID and IDL."
+}

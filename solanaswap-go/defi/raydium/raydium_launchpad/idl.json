@@ -1,0 +1,10 @@
+{
+  "address": "LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj",
+  "metadata": {
+    "name": "raydium_launchpad",
+    "version": "0.1.0",
+    "description": "Raydium Launchpad (LaunchLab)"
+  },
+  "instructions": [],
+  "note": "Anchor-based program. IDL needs to be generated from source."
+}

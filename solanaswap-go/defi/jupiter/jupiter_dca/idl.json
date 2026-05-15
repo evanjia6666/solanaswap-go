@@ -1,0 +1,10 @@
+{
+  "address": "DCAK36VfExkPdAkYUQg6ewgxyinvcEyPLyHjRbmveKFw",
+  "metadata": {
+    "name": "jupiter_dca",
+    "version": "0.1.0",
+    "description": "Jupiter DCA (Dollar Cost Averaging) Program"
+  },
+  "instructions": [],
+  "note": "Anchor-based program. IDL needs to be fetched from on-chain or generated."
+}

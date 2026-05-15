@@ -1,0 +1,10 @@
+{
+  "address": "Kamino111111111111111111111111111111111111111",
+  "metadata": {
+    "name": "kamino",
+    "version": "0.1.0",
+    "description": "Kamino Finance (placeholder - need correct program ID)"
+  },
+  "instructions": [],
+  "note": "Placeholder - need correct program ID and IDL."
+}

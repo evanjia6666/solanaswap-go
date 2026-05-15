@@ -1,0 +1,10 @@
+{
+  "address": "PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY",
+  "metadata": {
+    "name": "phoenix_v1",
+    "version": "0.1.0",
+    "description": "Phoenix Orderbook DEX"
+  },
+  "instructions": [],
+  "note": "Uses Shank for IDL generation. See Ellipsis-Labs/phoenix-v1 repo."
+}
