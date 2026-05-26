@@ -97,7 +97,10 @@ var (
 		calculateDiscriminator("global:remove_all_liquidity"):      true,
 		calculateDiscriminator("global:decrease_liquidity"):        true,
 		calculateDiscriminator("global:decrease_liquidity_v2"):     true,
+		calculateDiscriminator("global:decrease_liquidity_v3"):     true,
 		calculateDiscriminator("global:withdraw"):                  true,
+		calculateDiscriminator("global:close_position"):            true,
+		calculateDiscriminator("global:collect_protocol_fee"):      true,
 	}
 
 	addDiscriminator = map[string]bool{
