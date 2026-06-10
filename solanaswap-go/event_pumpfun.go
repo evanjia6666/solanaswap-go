@@ -219,8 +219,8 @@ func (p *Parser) setPumpFunSwapTxInfo(tx *TxInfo, instructIndex int) error {
 		tx.PoolIn = p.allAccountKeys[instr.Accounts[basePoolIndex]]
 		tx.PoolOut = p.allAccountKeys[instr.Accounts[quotePoolIndex]]
 	}
-	tx.InputMintDecimals = p.splDecimalsMap[tx.InputMint.String()]
-	tx.OutputMintDecimals = p.splDecimalsMap[tx.OutputMint.String()]
+	tx.InputMintDecimals = p.pumpfunDecimals(tx.InputMint)
+	tx.OutputMintDecimals = p.pumpfunDecimals(tx.OutputMint)
 	tx.Protocol = PROTOCOL_PUMPFUN
 
 	return nil

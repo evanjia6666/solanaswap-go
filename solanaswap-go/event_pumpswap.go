@@ -139,6 +139,19 @@ func (p *Parser) isPumpFunAMMBuyDiscriminator(instr solana.CompiledInstruction) 
 	return bytes.Equal(decodedBytes[:8], PumpFunAMMBuyDiscriminator[:])
 }
 
+// pumpfunDecimals returns the decimals for a PumpFun token.
+// PumpFun ecosystem tokens always use 6 decimals. When the mint is not found
+// in splDecimalsMap and is not native SOL, fall back to 6.
+func (p *Parser) pumpfunDecimals(mint solana.PublicKey) uint8 {
+	if d := p.splDecimalsMap[mint.String()]; d > 0 {
+		return d
+	}
+	if mint.Equals(NATIVE_SOL_MINT_PROGRAM_ID) {
+		return 9
+	}
+	return 6 // PumpFun default
+}
+
 func (p *Parser) processPumFumAMMBuySwaps(router solana.PublicKey, instruction solana.CompiledInstruction) *TxInfo {
 	inputMint := p.allAccountKeys[instruction.Accounts[4]]
 	outputMint := p.allAccountKeys[instruction.Accounts[3]]
@@ -148,9 +161,9 @@ func (p *Parser) processPumFumAMMBuySwaps(router solana.PublicKey, instruction s
 		Router:             router,
 		Owner:              *p.txInfo.Message.Signers().Last(),
 		InputMint:          inputMint,
-		InputMintDecimals:  p.splDecimalsMap[inputMint.String()],
+		InputMintDecimals:  p.pumpfunDecimals(inputMint),
 		OutputMint:         outputMint,
-		OutputMintDecimals: p.splDecimalsMap[outputMint.String()],
+		OutputMintDecimals: p.pumpfunDecimals(outputMint),
 		Pool:               p.allAccountKeys[instruction.Accounts[0]],
 		PoolIn:             p.allAccountKeys[instruction.Accounts[8]],
 		PoolOut:            p.allAccountKeys[instruction.Accounts[7]],
@@ -168,9 +181,9 @@ func (p *Parser) processPumpFunAMMSellSwaps(router solana.PublicKey, instruction
 		Router:             router,
 		Owner:              *p.txInfo.Message.Signers().Last(),
 		InputMint:          inputMint,
-		InputMintDecimals:  p.splDecimalsMap[inputMint.String()],
+		InputMintDecimals:  p.pumpfunDecimals(inputMint),
 		OutputMint:         outputMint,
-		OutputMintDecimals: p.splDecimalsMap[outputMint.String()],
+		OutputMintDecimals: p.pumpfunDecimals(outputMint),
 		Pool:               p.allAccountKeys[instruction.Accounts[0]],
 		PoolIn:             p.allAccountKeys[instruction.Accounts[7]],
 		PoolOut:            p.allAccountKeys[instruction.Accounts[8]],
