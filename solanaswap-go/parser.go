@@ -168,6 +168,23 @@ type SwapData struct {
 func (p *Parser) ParseTransaction() ([]SwapData, error) {
 	var parsedSwaps []SwapData
 
+	// Filter out swaps where InputMint/OutputMint/Pool is the SystemProgram
+	// address — some parsers may incorrectly assign this when account indexing
+	// is off. This would cause a downstream panic in MustHexToAddress.
+	filterSystemProgram := func(swaps []SwapData) []SwapData {
+		filtered := swaps[:0]
+		for _, sd := range swaps {
+			if sd.Tx != nil && (sd.Tx.InputMint.Equals(solana.SystemProgramID) || sd.Tx.OutputMint.Equals(solana.SystemProgramID) || sd.Tx.Pool.Equals(solana.SystemProgramID)) {
+				log.Printf("BUG: SystemProgram as mint/pool! sig=%s amm=%s protocol=%s pool=%s inputMint=%s outputMint=%s",
+					p.txInfo.Signatures[0].String(), sd.Tx.Amm.String(), sd.Tx.Protocol,
+					sd.Tx.Pool.String(), sd.Tx.InputMint.String(), sd.Tx.OutputMint.String())
+				continue
+			}
+			filtered = append(filtered, sd)
+		}
+		return filtered
+	}
+
 	skip := false
 	for i, outerInstruction := range p.txInfo.Message.Instructions {
 		progID := p.allAccountKeys[outerInstruction.ProgramIDIndex]
@@ -202,7 +219,7 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 		}
 	}
 	if skip {
-		return parsedSwaps, nil
+		return filterSystemProgram(parsedSwaps), nil
 	}
 
 	for i, outerInstruction := range p.txInfo.Message.Instructions {
@@ -241,7 +258,7 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 		}
 	}
 
-	return parsedSwaps, nil
+	return filterSystemProgram(parsedSwaps), nil
 }
 
 type SwapInfo struct {
