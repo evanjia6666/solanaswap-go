@@ -73,7 +73,9 @@ func (p *Parser) processJupiterSwaps(instructionIndex int) []SwapData {
 					}
 					if eventData != nil {
 						tx := p.parseJupiterTxInfo(eventData, innerInstructionSet, last)
-						p.setPoolInfoFromAMM(tx, ammInstrs, len(swaps))
+						if !p.setPoolInfoFromAMM(tx, ammInstrs, len(swaps)) {
+							continue
+						}
 						swaps = append(swaps, SwapData{Type: JUPITER, Data: eventData, Tx: tx})
 					}
 					last = i
@@ -89,7 +91,9 @@ func (p *Parser) processJupiterSwaps(instructionIndex int) []SwapData {
 						tx.Amm = inferredAMMs[ei]
 						tx.Protocol = protocolFromAMM(inferredAMMs[ei])
 					}
-					p.setPoolInfoFromAMM(tx, ammInstrs, startIdx+ei)
+					if !p.setPoolInfoFromAMM(tx, ammInstrs, startIdx+ei) {
+						continue
+					}
 					swaps = append(swaps, SwapData{Type: JUPITER, Data: eventData, Tx: tx})
 				}
 					last = i
@@ -124,16 +128,18 @@ func (p *Parser) collectAMMInstructionsBetweenEvents(innerSet rpc.InnerInstructi
 }
 
 // setPoolInfoFromAMM calls setTxPoolInfo for the nth AMM instruction if available.
-func (p *Parser) setPoolInfoFromAMM(tx *TxInfo, ammInstrs []*solana.CompiledInstruction, idx int) {
+// Returns true if a valid AMM instruction was found, false otherwise.
+func (p *Parser) setPoolInfoFromAMM(tx *TxInfo, ammInstrs []*solana.CompiledInstruction, idx int) bool {
 	for i := idx; i < len(ammInstrs); i++ {
 		ammInstr := ammInstrs[i]
 		ammProgID := p.allAccountKeys[ammInstr.ProgramIDIndex]
 		err := p.setTxPoolInfo(ammProgID, tx, *ammInstr)
 		if err == nil {
-			return
+			return true
 		}
 		// If this wasn't a valid swap instruction, try the next one
 	}
+	return false
 }
 
 func (p *Parser) collectAMMsFromInnerInstructions(innerSet rpc.InnerInstruction) []solana.PublicKey {

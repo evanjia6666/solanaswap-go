@@ -245,7 +245,9 @@ func (p *Parser) processOKXLabs2SwapEvents(instructionIndex int) []SwapData {
 		if ammInstr != nil {
 			ammProgID := p.allAccountKeys[ammInstr.ProgramIDIndex]
 			protocol := tx.Protocol
-			p.setTxPoolInfo(ammProgID, tx, *ammInstr)
+			if err := p.setTxPoolInfo(ammProgID, tx, *ammInstr); err != nil {
+				continue
+			}
 			tx.Protocol = protocol
 			tx.Amm = ammProgID
 		}
