@@ -18,6 +18,10 @@ var (
 	PumpFunAMMBuyDiscriminator          = [8]byte{102, 6, 61, 18, 1, 218, 235, 234}
 	PumpFunAMMBuyExactQuoteInDiscriminator = [8]byte{198, 46, 21, 82, 180, 217, 232, 112}
 	PumpFunAMMSellExactInDiscriminator     = [8]byte{149, 39, 222, 155, 211, 124, 152, 26}
+	// Pump.fun bonding curve V2 discriminators (added post buy_exact_quote_in_v2 / sell_v2 upgrade)
+	PumpFunBuyExactSolInDiscriminator  = [8]byte{56, 252, 116, 8, 158, 223, 205, 95}
+	PumpFunSellV2Discriminator         = [8]byte{93, 246, 130, 60, 231, 233, 64, 178}
+	PumpFunBuyExactQuoteInV2Discriminator = [8]byte{194, 171, 28, 70, 104, 77, 91, 47}
 )
 
 type PumpfunAMMBuyEvent struct {

@@ -976,6 +976,35 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 		poolInAccountIndex = 7
 		poolOutAccountIndex = 8
 		protocol = string(PUMP_FUN)
+	case progID.Equals(PUMP_FUN_PROGRAM_ID):
+		// Pump.fun bonding curve — discriminator determines V1 vs V2 account layout.
+		// V1 (buy / buy_exact_sol_in / sell): pool=3, poolIn=4
+		// V2 (buy_exact_quote_in_v2 / sell_v2): pool=10, poolIn=11, poolOut=12
+		if len(instruction.Data) < 8 {
+			err = errors.New("PumpFun bonding curve: instruction data too short")
+			return
+		}
+		disc := [8]byte(instruction.Data[:8])
+		switch disc {
+		case PumpFunAMMBuyDiscriminator, PumpFunBuyExactSolInDiscriminator, PumpFunAMMSellDiscriminator, PumpFunAMMSellExactInDiscriminator:
+			// V1 layout: accounts[3]=bonding_curve, accounts[4]=associated_bonding_curve
+			poolAccountIndex = 3
+			poolInAccountIndex = 4
+			poolOutAccountIndex = 4
+		case PumpFunBuyExactQuoteInV2Discriminator, PumpFunSellV2Discriminator:
+			// V2 layout: accounts[10]=bonding_curve, accounts[11]=associated_base_bonding_curve, accounts[12]=associated_quote_bonding_curve
+			poolAccountIndex = 10
+			poolInAccountIndex = 11
+			poolOutAccountIndex = 12
+		default:
+			err = fmt.Errorf("PumpFun bonding curve: unknown discriminator %x", disc)
+			return
+		}
+		// Set discriminatorWhiteList to the matched discriminator so it passes the
+		// global discriminator check below (bonding curve discriminators don't appear
+		// in the global swapDiscriminator table).
+		discriminatorWhiteList = [][]byte{disc[:]}
+		protocol = string(PUMP_FUN)
 	case progID.Equals(METEORA_DAMM_V2):
 		poolAccountIndex = 1
 		poolInAccountIndex = 4
