@@ -38,7 +38,7 @@ func TestRegression_AllCases(t *testing.T) {
 			name: "Bitget Swap — Multi-leg",
 			sig:  "5JtAbkDqdDqKRd5dfEpYFBAFiBP6zTDwtx6kEfUJxiyK197Vgb5yYnTw7DYxjzSdbnqTr6CknpgErLADEa2SrkQh",
 			expected: []legExpectation{
-				{"PumpFun.AMM", "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump", "So11111111111111111111111111111111111111112", 315168076744, 274135327, "EbnKTMYx3UR2jUhkVhK1sR86eLV6xVUAwVr6jZpNARnf", "DEkHtJReTcwCuf1dnbXwwHLwaRNB2jGPXkZdDNCz2CAJ", "9jCG3eGHDLGC9MBusRtmPMdHwUcRMJGK2oiaYrUiYaqG", "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"},
+				{"PumpSwap", "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump", "So11111111111111111111111111111111111111112", 315168076744, 274135327, "EbnKTMYx3UR2jUhkVhK1sR86eLV6xVUAwVr6jZpNARnf", "DEkHtJReTcwCuf1dnbXwwHLwaRNB2jGPXkZdDNCz2CAJ", "9jCG3eGHDLGC9MBusRtmPMdHwUcRMJGK2oiaYrUiYaqG", "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"},
 				{"ZeroFi", "So11111111111111111111111111111111111111112", "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", 274135327, 23823600, "5AfaGqxPH115joNwSqEEzMF5BjKfkUMki6zg6TGCXLKX", "YAh1vvZPnuCjZ354LF8ria76cJaSEPvPyPYuRoxVkuH", "Fiw6wDGrD5SC9vEJWPQumb499JbPVBuVsmKbNgzM22jT", "ZERor4xhbUycZ6gb9ntrhqscUcZmAbQDjEAtCf4hbZY"},
 			},
 		},
@@ -46,7 +46,7 @@ func TestRegression_AllCases(t *testing.T) {
 			name: "Arbitrage Bot (3s1r)",
 			sig:  "44JDfDCPZub9aPtgEe7z89ot7iaLvgbMC52YagQWVDsVubmXsayFo6Jpk6aG1v3E9sg9hBKcX1CUdFjotwzKuTZz",
 			expected: []legExpectation{
-				{"PumpFun.AMM", "So11111111111111111111111111111111111111112", "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump", 2724543, 3159124095, "EbnKTMYx3UR2jUhkVhK1sR86eLV6xVUAwVr6jZpNARnf", "9jCG3eGHDLGC9MBusRtmPMdHwUcRMJGK2oiaYrUiYaqG", "DEkHtJReTcwCuf1dnbXwwHLwaRNB2jGPXkZdDNCz2CAJ", "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"},
+				{"PumpSwap", "So11111111111111111111111111111111111111112", "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump", 2724543, 3159124095, "EbnKTMYx3UR2jUhkVhK1sR86eLV6xVUAwVr6jZpNARnf", "9jCG3eGHDLGC9MBusRtmPMdHwUcRMJGK2oiaYrUiYaqG", "DEkHtJReTcwCuf1dnbXwwHLwaRNB2jGPXkZdDNCz2CAJ", "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"},
 				{"Meteora_DAMM_V2", "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump", "So11111111111111111111111111111111111111112", 3159124095, 2755904, "3XT92xxgZqSyexNpoGkHFU87rFVeVK2e8wDa7sZhbvSC", "6jrK2GazooyVUW4qtJwDUSFrpi7ibSxTmefKp1nrzHz8", "6B7GDbqNorFMqsPZzLe9wPnydWkAe7uWbScvujm6aejm", "cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG"},
 			},
 		},
@@ -54,7 +54,7 @@ func TestRegression_AllCases(t *testing.T) {
 			name: "Arbitrage Bot (B7qnn)",
 			sig:  "5kCsHh9W6CPjxEpv9JGyvkJjSGHmPPxPtJCTk8wJB9xX81DUa7uBkRFQYUj9HeXTxsV1zTbjGCSDhQGmPBEzczZR",
 			expected: []legExpectation{
-				{"PumpFun.AMM", "So11111111111111111111111111111111111111112", "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump", 15451535, 19312159098, "EbnKTMYx3UR2jUhkVhK1sR86eLV6xVUAwVr6jZpNARnf", "9jCG3eGHDLGC9MBusRtmPMdHwUcRMJGK2oiaYrUiYaqG", "DEkHtJReTcwCuf1dnbXwwHLwaRNB2jGPXkZdDNCz2CAJ", "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"},
+				{"PumpSwap", "So11111111111111111111111111111111111111112", "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump", 15451535, 19312159098, "EbnKTMYx3UR2jUhkVhK1sR86eLV6xVUAwVr6jZpNARnf", "9jCG3eGHDLGC9MBusRtmPMdHwUcRMJGK2oiaYrUiYaqG", "DEkHtJReTcwCuf1dnbXwwHLwaRNB2jGPXkZdDNCz2CAJ", "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"},
 				{"Meteora_DAMM_V2", "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump", "So11111111111111111111111111111111111111112", 19312159098, 16036463, "3XT92xxgZqSyexNpoGkHFU87rFVeVK2e8wDa7sZhbvSC", "6jrK2GazooyVUW4qtJwDUSFrpi7ibSxTmefKp1nrzHz8", "6B7GDbqNorFMqsPZzLe9wPnydWkAe7uWbScvujm6aejm", "cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG"},
 			},
 		},
@@ -62,42 +62,42 @@ func TestRegression_AllCases(t *testing.T) {
 			name: "Binance Wallet — Single Leg",
 			sig:  "2rwTmdPNtUNysZtUafAW9FBW7Vn6y2LyhQr9ZRATgPihFxFEgCUnLvRkQTGyG6g6h9cCKdLSag96DPuqYdm4j1df",
 			expected: []legExpectation{
-				{"PumpFun.AMM", "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump", "So11111111111111111111111111111111111111112", 2270000000000, 1954407176, "EbnKTMYx3UR2jUhkVhK1sR86eLV6xVUAwVr6jZpNARnf", "DEkHtJReTcwCuf1dnbXwwHLwaRNB2jGPXkZdDNCz2CAJ", "9jCG3eGHDLGC9MBusRtmPMdHwUcRMJGK2oiaYrUiYaqG", "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"},
+				{"PumpSwap", "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump", "So11111111111111111111111111111111111111112", 2270000000000, 1954407176, "EbnKTMYx3UR2jUhkVhK1sR86eLV6xVUAwVr6jZpNARnf", "DEkHtJReTcwCuf1dnbXwwHLwaRNB2jGPXkZdDNCz2CAJ", "9jCG3eGHDLGC9MBusRtmPMdHwUcRMJGK2oiaYrUiYaqG", "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"},
 			},
 		},
 		{
 			name: "Axiom Trade — Single Leg",
 			sig:  "5yQZpKcu3gmSKKwX3zMC4EWKDB9z8UFYZ4fweModAv2cSY1b38GUzmG1FQt7a39WWqdRX3S5fcnCZ2od3rZqGyGe",
 			expected: []legExpectation{
-				{"PumpFun.AMM", "So11111111111111111111111111111111111111112", "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump", 490108694, 607963442552, "EbnKTMYx3UR2jUhkVhK1sR86eLV6xVUAwVr6jZpNARnf", "9jCG3eGHDLGC9MBusRtmPMdHwUcRMJGK2oiaYrUiYaqG", "DEkHtJReTcwCuf1dnbXwwHLwaRNB2jGPXkZdDNCz2CAJ", "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"},
+				{"PumpSwap", "So11111111111111111111111111111111111111112", "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump", 490108694, 607963442552, "EbnKTMYx3UR2jUhkVhK1sR86eLV6xVUAwVr6jZpNARnf", "9jCG3eGHDLGC9MBusRtmPMdHwUcRMJGK2oiaYrUiYaqG", "DEkHtJReTcwCuf1dnbXwwHLwaRNB2jGPXkZdDNCz2CAJ", "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"},
 			},
 		},
 		{
 			name: "OKX Labs 2 — Single Leg",
 			sig:  "2QzkwCkLd3mP2TSPQ5M7eL3qGMwZmyWzPShdUC7TrTzL5TmNRdsvKMH5GNG7L8VMfFAoGBRGt1ohSCpJqsF9rhTM",
 			expected: []legExpectation{
-				{"PumpFun.AMM", "So11111111111111111111111111111111111111112", "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump", 198300000, 245048222036, "EbnKTMYx3UR2jUhkVhK1sR86eLV6xVUAwVr6jZpNARnf", "9jCG3eGHDLGC9MBusRtmPMdHwUcRMJGK2oiaYrUiYaqG", "DEkHtJReTcwCuf1dnbXwwHLwaRNB2jGPXkZdDNCz2CAJ", "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"},
+				{"PumpSwap", "So11111111111111111111111111111111111111112", "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump", 198300000, 245048222036, "EbnKTMYx3UR2jUhkVhK1sR86eLV6xVUAwVr6jZpNARnf", "9jCG3eGHDLGC9MBusRtmPMdHwUcRMJGK2oiaYrUiYaqG", "DEkHtJReTcwCuf1dnbXwwHLwaRNB2jGPXkZdDNCz2CAJ", "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"},
 			},
 		},
 		{
 			name: "Bitget DEX Aggregator",
 			sig:  "52ctk8ybpLmqfJvjPBj59d7tZsZxasREVCBEkdxbueu6ZuhD6WvrJjD4ouMEV5TTeAMSeK5yB43VUnQ3pynkHQ9k",
 			expected: []legExpectation{
-				{"PumpFun.AMM", "So11111111111111111111111111111111111111112", "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump", 1970335967, 2032255254700, "EbnKTMYx3UR2jUhkVhK1sR86eLV6xVUAwVr6jZpNARnf", "9jCG3eGHDLGC9MBusRtmPMdHwUcRMJGK2oiaYrUiYaqG", "DEkHtJReTcwCuf1dnbXwwHLwaRNB2jGPXkZdDNCz2CAJ", "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"},
+				{"PumpSwap", "So11111111111111111111111111111111111111112", "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump", 1970335967, 2032255254700, "EbnKTMYx3UR2jUhkVhK1sR86eLV6xVUAwVr6jZpNARnf", "9jCG3eGHDLGC9MBusRtmPMdHwUcRMJGK2oiaYrUiYaqG", "DEkHtJReTcwCuf1dnbXwwHLwaRNB2jGPXkZdDNCz2CAJ", "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"},
 			},
 		},
 		{
 			name: "Jupiter Aggregator v6 (Event)",
 			sig:  "5LFEcHCGdXRn9FdmZvm1neT1jLm5T3dJToY1utcpsyHMifc7UNNJdeS6bQhXXtAwmQveR58ELyZfmi83wJinXYQH",
 			expected: []legExpectation{
-				{"PumpFun.AMM", "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump", "So11111111111111111111111111111111111111112", 114521290827, 100409303, "EbnKTMYx3UR2jUhkVhK1sR86eLV6xVUAwVr6jZpNARnf", "DEkHtJReTcwCuf1dnbXwwHLwaRNB2jGPXkZdDNCz2CAJ", "9jCG3eGHDLGC9MBusRtmPMdHwUcRMJGK2oiaYrUiYaqG", "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"},
+				{"PumpSwap", "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump", "So11111111111111111111111111111111111111112", 114521290827, 100409303, "EbnKTMYx3UR2jUhkVhK1sR86eLV6xVUAwVr6jZpNARnf", "DEkHtJReTcwCuf1dnbXwwHLwaRNB2jGPXkZdDNCz2CAJ", "9jCG3eGHDLGC9MBusRtmPMdHwUcRMJGK2oiaYrUiYaqG", "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"},
 			},
 		},
 		{
 			name: "Jupiter Aggregator v6 (RouteV2)",
 			sig:  "4iaTjbw7nJ3aqeavwCyrMZvF69u8mU9zbJQMQaxifjyEayvVDUwcyHHQkPNbWhU4EAqkXSCQERR3y6DZ41jTxF1T",
 			expected: []legExpectation{
-				{"PumpFun.AMM", "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump", "So11111111111111111111111111111111111111112", 32143500000, 25657769, "EbnKTMYx3UR2jUhkVhK1sR86eLV6xVUAwVr6jZpNARnf", "DEkHtJReTcwCuf1dnbXwwHLwaRNB2jGPXkZdDNCz2CAJ", "9jCG3eGHDLGC9MBusRtmPMdHwUcRMJGK2oiaYrUiYaqG", "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"},
+				{"PumpSwap", "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump", "So11111111111111111111111111111111111111112", 32143500000, 25657769, "EbnKTMYx3UR2jUhkVhK1sR86eLV6xVUAwVr6jZpNARnf", "DEkHtJReTcwCuf1dnbXwwHLwaRNB2jGPXkZdDNCz2CAJ", "9jCG3eGHDLGC9MBusRtmPMdHwUcRMJGK2oiaYrUiYaqG", "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"},
 				{"Raydium", "So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 25657769, 2241421, "8sLbNZoA1cfnvMJLPfp98ZLAnFSYCFApfJKMbiXNLwxj", "6P4tvbzRY6Bh3MiWDHuLqyHywovsRwRpfskPvyeSoHsz", "6mK4Pxs6GhwnessH7CvPivqDYauiHZmAdbEFDpXFk9zt", "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK"},
 			},
 		},
@@ -106,23 +106,23 @@ func TestRegression_AllCases(t *testing.T) {
 			sig:  "3aqonRWReqZUoZiRJuq9KX2uMUUVTKL64dTg2krM8enEwv6zw3tjm8c27HasVde3CdNofxwgpCHupSUHcSuGsubA",
 			expected: []legExpectation{
 				{"HumidiFi", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "So11111111111111111111111111111111111111112", 100986821, 1154784782, "8sKQHfjNhvmAw94PhfvfMcytmqW6jmxvwieYyzXCCPu", "H292B1VbSvD6GuUmSvUvfQstg1Acfzog796uQ7d1ccCw", "A3C9xwv4Hfx92M5HQpxUiibSqCa5pYhD2kTwnU5fEPq", "9H6tua7jkLhdm3w8BvgpTn5LZNU7g4ZynDmCiNN3q6Rp"},
-				{"PumpFun.AMM", "So11111111111111111111111111111111111111112", "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump", 1143373865, 1402190646613, "EbnKTMYx3UR2jUhkVhK1sR86eLV6xVUAwVr6jZpNARnf", "9jCG3eGHDLGC9MBusRtmPMdHwUcRMJGK2oiaYrUiYaqG", "DEkHtJReTcwCuf1dnbXwwHLwaRNB2jGPXkZdDNCz2CAJ", "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"},
+				{"PumpSwap", "So11111111111111111111111111111111111111112", "E95sJahssFKUk6jcWYbyfmjtcCsr4Z226HD9Qbjupump", 1143373865, 1402190646613, "EbnKTMYx3UR2jUhkVhK1sR86eLV6xVUAwVr6jZpNARnf", "9jCG3eGHDLGC9MBusRtmPMdHwUcRMJGK2oiaYrUiYaqG", "DEkHtJReTcwCuf1dnbXwwHLwaRNB2jGPXkZdDNCz2CAJ", "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"},
 			},
 		},
 		{
 			name: "Raydium+Whirlpools Program (regression)",
 			sig:  "HwPpFnBuyxCLRsuJNEZ5SBHx6xgtXy9TeLUkk8KNVjNXmbZsyyYyfkvdsEeD3mgNi4TYBs3A1wrbFHDDafqdwHm",
 			expected: []legExpectation{
-				{"Raydium Concentrated Liquidity", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", 449550000, 208773150, "49iMatQtoyabsYAQc8GafVq6aeBFVDxSRH44oiatyyw6", "4JEtq7NraU9U5URcCKSv6sWRRgDSuSnUjYDqpSJSWohY", "DyKsypuzQvhi37K8UvjCMBC43h4HtW4r6jhWoqHyrSSe", "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK"},
-				{"Whirlpools Program", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", 49950000, 23197311, "6R4r93V5fcMzc13CL2enEepDSYcr4Qx3ptZBDwudTXCo", "5TSHEwRAgHLTYkchrUNiKUL2RvuZgdh3vExbMptWrHoX", "FaHQ9Ny2U2RkcdapsKVr9pvnt4Mg7n92NdKnvyRzuibH", "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"},
+				{"Raydium", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", 449550000, 208773150, "49iMatQtoyabsYAQc8GafVq6aeBFVDxSRH44oiatyyw6", "4JEtq7NraU9U5URcCKSv6sWRRgDSuSnUjYDqpSJSWohY", "DyKsypuzQvhi37K8UvjCMBC43h4HtW4r6jhWoqHyrSSe", "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK"},
+				{"Orca", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", 49950000, 23197311, "6R4r93V5fcMzc13CL2enEepDSYcr4Qx3ptZBDwudTXCo", "5TSHEwRAgHLTYkchrUNiKUL2RvuZgdh3vExbMptWrHoX", "FaHQ9Ny2U2RkcdapsKVr9pvnt4Mg7n92NdKnvyRzuibH", "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"},
 			},
 		},
 		{
 			name: "Raydium swap (regression)",
 			sig:  "3XgeS99txr7YDwyw14aVT1tewhQgEgBMzzxT6ZGAVPzusNrgx392wstsbgPrBxnKw6xJLtUfVrQpGvFFU4cQQfj5",
 			expected: []legExpectation{
-				{"Raydium Concentrated Liquidity", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 15367000, 33015387, "49iMatQtoyabsYAQc8GafVq6aeBFVDxSRH44oiatyyw6", "DyKsypuzQvhi37K8UvjCMBC43h4HtW4r6jhWoqHyrSSe", "4JEtq7NraU9U5URcCKSv6sWRRgDSuSnUjYDqpSJSWohY", "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK"},
-				{"Whirlpools Program", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 124333000, 267254823, "6R4r93V5fcMzc13CL2enEepDSYcr4Qx3ptZBDwudTXCo", "FaHQ9Ny2U2RkcdapsKVr9pvnt4Mg7n92NdKnvyRzuibH", "5TSHEwRAgHLTYkchrUNiKUL2RvuZgdh3vExbMptWrHoX", "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"},
+				{"Raydium", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 15367000, 33015387, "49iMatQtoyabsYAQc8GafVq6aeBFVDxSRH44oiatyyw6", "DyKsypuzQvhi37K8UvjCMBC43h4HtW4r6jhWoqHyrSSe", "4JEtq7NraU9U5URcCKSv6sWRRgDSuSnUjYDqpSJSWohY", "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK"},
+				{"Orca", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 124333000, 267254823, "6R4r93V5fcMzc13CL2enEepDSYcr4Qx3ptZBDwudTXCo", "FaHQ9Ny2U2RkcdapsKVr9pvnt4Mg7n92NdKnvyRzuibH", "5TSHEwRAgHLTYkchrUNiKUL2RvuZgdh3vExbMptWrHoX", "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"},
 			},
 		},
 		{
@@ -141,7 +141,7 @@ func TestRegression_AllCases(t *testing.T) {
 				{"Meteora_DLMM_Program", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", "So11111111111111111111111111111111111111112", 510946, 11581194, "FCn5zw4gAcfRpQgst5ThFuzBGXbbJ6RocVErgC4vJ9j1", "FNaEXnGP3hUrcJSBXBKzzDRJmitNnVwwQ6pQx6LhAumF", "HZgAwbRXeUSEjZL5nERN5mDeXTKiu6ZgbDMy4MoEHcd9", "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"},
 				{"Meteora_DLMM_Program", "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 188981, 407737, "8Xx3VeN92DsZksHs2nXMiJUcR5JBofqmbXqacoeUTj2g", "2tmb3wpP6XdRYUnedRWsR69odVfMawFsH2LeqBi7HZPk", "8KRNJjewxw7icuKf8LYPFaG2JtQyiuDH3dGwS2MZTtMJ", "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"},
 				{"Pancake Swap", "So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 11581194, 1102408, "DJNtGuBGEQiUCWE8F981M2C3ZghZt2XLD8f2sQdZ6rsZ", "bHHnvxhkzBebvqxpnzVaXSdQ1GdFeZFg8yi9YKgL7zE", "CRKZr6Y9t2hzVNWY4gJk5eig8uznyykB4RTuGSqJDw7n", "HpNfyc2Saw7RKkQd8nEL4khUcuPhQ7WwY1B2qjx8jxFq"},
-				{"Stable Swap", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN", 1510145, 5820395, "ASUXpwE84MKGmaTp2Sxd9ZE15qfENwS8oBH7UUkk1AwB", "2PkFYJpyum86qkAM46hZ7bNvUGq157RoaPKFrgTAWLub", "GvNR6b4nDjGJiwFj44uoxW8E7FPVgbLHm3HaBDRhVbT3", "swapFpHZwjELNnjvThjajtiVmkz3yPQEHjLtka2fwHW"},
+				{"StableWeighted", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN", 1510145, 5820395, "ASUXpwE84MKGmaTp2Sxd9ZE15qfENwS8oBH7UUkk1AwB", "2PkFYJpyum86qkAM46hZ7bNvUGq157RoaPKFrgTAWLub", "GvNR6b4nDjGJiwFj44uoxW8E7FPVgbLHm3HaBDRhVbT3", "swapFpHZwjELNnjvThjajtiVmkz3yPQEHjLtka2fwHW"},
 			},
 		},
 		{
@@ -173,6 +173,28 @@ func TestRegression_AllCases(t *testing.T) {
 			sig:  "UsNewgnk1WR3mqJuurs97xb1kTMngPVwQ39EXdUUTcQa1jvGt5ZwK3Fdn5izGzVAJCHNaR4a137EtJQKw7rDNq4",
 			expected: []legExpectation{
 				{string(PUMP_FUN), "So11111111111111111111111111111111111111112", "CWtjWZsgP5iKJ6qqb6FWBeDt5RWDZxdvn7WCHwhpump", 50000001, 1785357772752, "BN2VRinDQcMPLC8QyXRY3ZhwfRoMb4xcT83VbrvXVach", "Bdd7GpKt9EPoKs7yyRVLuUHhG76AZMapFCqmNoyAMNhm", "GJCQwY6WKSSMLkCHf7t8fEJwLFsAnXyFoJARBrc4tkMF", "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P"},
+			},
+		},
+		{
+			name: "okx router + goonfi v2",
+			sig:  "48drjMPpMcxnVGjmqcWuTYSg28gUEPa2QrUh39jeC5h3S7C6ZW6YKFZYHDrHKAKjoBs82uXGxfFLEWTRbzxLjAsF",
+			expected: []legExpectation{
+				{"GoonFi V2", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", 2000000000, 2001931864, "EEUNhHsRoUVgJUFpkupmdF4v7uLUw1zhYLp7u9s8zFqG", "F9xyBfChZ2uCv7aQujJCe6gKVx7ydCmxfh2ZWrNwFoKr", "5dRazfLSjTq15r7XL6b5WBGTFtria1EHZQS7VZr7BD5V", "goonuddtQRrWqqn5nFyczVKaie28f3kDkHWkHtURSLE"},
+			},
+		},
+		{
+			name: "jupiter aggregator v6 + SolFi v2",
+			sig:  "2Z7cJ7WdAmYFEuAHiTzp9vFVoC4dVSLSdifmpbyJLvdPsMRCekRbPord1RBpvwAevR9t9z2K1H2v9EGoEw7Q5nNg",
+			expected: []legExpectation{
+				{"SolFi V2", "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 543112316, 542615278, "FkEB6uvyzuoaGpgs4yRtFtxC4WJxhejNFbUkj5R6wR32", "5bHD9xdEzJdkVuhs54mGPC9BZgUshqgMg4tqmTwhWggc", "ARWaajRJyF6PKQryJ4HLzLBfTWM2qmVQUQVtBjk6PgPc", "SV2EYYJyRz2YhfXwXnhNAevDEui5Q6yrfyo13WtupPF"},
+			},
+		},
+		{
+			name: "alphaq + manifest",
+			sig:  "4hZFPHffsg5Y4utHjsXvvms5AdakSicftw1WgtT7wp42jjMDK7E2xrPatuwEniC9TJsY3CWHh3Tw3vqKJikGME3Q",
+			expected: []legExpectation{
+				{"AlphaQ", "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 19428506, 19410685, "Pi9nzTjPxD8DsRfRBGfKYzmefJoJM8TcXu2jyaQjSHm", "GF8SKKobum6UJnhX2mLHePU38htg5vdr9zcY4jH8Pqs2", "F2KCaXcp7AoQtxTDvNEDCyMyWjSCAMWNzcyN9dsPfPs5", "ALPHAQmeA7bjrVuccPsYPiCvsi428SNwte66Srvs4pHA"},
+				{"Manifest", "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 8005138, 7997820, "8sjV1AqBFvFuADBCQHhotaRq5DFFYSjjg1jMyVWMqXvZ", "CNRQ2Q5YURFcQrATzYeKUWgKUoBDfqzkDrRWf21UXCVo", "FGQoLafigpyVb7mLa6pvsDDpDaEE3JetrzQoAggTo3n7", "MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms"},
 			},
 		},
 	}

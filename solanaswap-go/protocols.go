@@ -14,13 +14,16 @@ var AMMProtocolNames = map[solana.PublicKey]string{
 	BYREAL_CLMM_PROGRAM_ID:                    "Byreal CLMM",
 	METEORA_DAMM_V2:                           "Meteora_DAMM_V2",
 	Meteora_Dynamic_Bonding_Curve_Program:     "Meteora Dynamic Bonding Curve",
-	PUMPFUN_AMM_PROGRAM_ID:                    "PumpFun.AMM",
-	PUMP_FUN_PROGRAM_ID:                       "PumpFun.AMM",
+	PUMPFUN_AMM_PROGRAM_ID:                    "PumpSwap",
+	PUMP_FUN_PROGRAM_ID:                       "PumpFun",
 	ZEROFI:                                    "ZeroFi",
 	HUMIDIDI_PROGRAM_ID:                       "HumidiFi",
 	PANCAKE_SWAP_PROGRAM_ID:                   "PancakeSwap",
 	MANIFEST_PROGRAM_ID:                       "Manifest",
 	PHOENIX_PROGRAM_ID:                        "Phoenix",
+	GOONFI_PROGRAM_ID:                         "GoonFi V2",
+	SOLFI_V2_PROGRAM_ID:                       "SolFi V2",
+	ALPHAQ_PROGRAM_ID:                         "AlphaQ",
 }
 
 func ProtocolName(amm solana.PublicKey) string {

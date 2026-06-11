@@ -128,3 +128,6 @@ Notes:
 - `SwapInfo.Timestamp` is not populated from the transaction (must be fetched from the block separately).
 - `splTokenInfoMap` and `splDecimalsMap` are built once per parser from `tx.Meta`; logic improvements are noted in README as TODO.
 - Routers that only wrap AMM calls are handled generically via `routerPrograms` + `processRouterSwaps`.
+
+## amm， routerr， aggregator idl file search
+- https://github.com/bitquery/solana-idl-lib/

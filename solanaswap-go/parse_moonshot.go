@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	ag_binary "github.com/gagliardetto/binary"
+	"github.com/franco-bianco/solanaswap-go/solanaswap-go/defi/moonshot"
 	"github.com/gagliardetto/solana-go"
 	"github.com/mr-tron/base58"
 )
@@ -25,8 +25,8 @@ const (
 )
 
 var (
-	MOONSHOT_BUY_INSTRUCTION  = ag_binary.TypeID([8]byte{102, 6, 61, 18, 1, 218, 235, 234})
-	MOONSHOT_SELL_INSTRUCTION = ag_binary.TypeID([8]byte{51, 230, 133, 164, 1, 127, 131, 173})
+	MOONSHOT_BUY_INSTRUCTION  = moonshot.Instruction_Buy
+	MOONSHOT_SELL_INSTRUCTION = moonshot.Instruction_Sell
 )
 
 // processMoonshotSwaps processes all Moonshot swap instructions in the transaction

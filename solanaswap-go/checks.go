@@ -3,6 +3,7 @@ package solanaswapgo
 import (
 	"bytes"
 
+	"github.com/franco-bianco/solanaswap-go/solanaswap-go/defi/pumpswap"
 	"github.com/gagliardetto/solana-go"
 	"github.com/mr-tron/base58"
 )
@@ -98,5 +99,7 @@ func (p *Parser) isPumpFunAMMSwapEventInstruction(inst solana.CompiledInstructio
 	if err != nil {
 		return false
 	}
-	return bytes.Equal(decodedBytes[:16], PumpFunAMMSellEventDiscriminator[:]) || bytes.Equal(decodedBytes[:16], PumpFunAMMBuyEventDiscriminator[:])
+	return bytes.Equal(decodedBytes[:8], AnchorSelfCPIDiscriminator[:]) &&
+		(bytes.Equal(decodedBytes[8:16], pumpswap.Event_BuyEvent[:]) ||
+			bytes.Equal(decodedBytes[8:16], pumpswap.Event_SellEvent[:]))
 }

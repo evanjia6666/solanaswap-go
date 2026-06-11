@@ -6,6 +6,7 @@ import (
 	"math/big"
 
 	"github.com/franco-bianco/solanaswap-go/solanaswap-go/defi/pumpfun"
+	"github.com/franco-bianco/solanaswap-go/solanaswap-go/defi/pumpswap"
 	ag_binary "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
 	"github.com/mr-tron/base58"
@@ -305,15 +306,15 @@ func (p *Parser) setPumpFunSwapTxInfo(tx *TxInfo, instructIndex int) error {
 	tx.Pool = p.allAccountKeys[instr.Accounts[poolIndex]]
 
 	switch {
-	case bytes.Equal(instr.Data[:8], PumpFunAMMBuyDiscriminator[:]),
-		bytes.Equal(instr.Data[:8], PumpFunAMMBuyExactQuoteInDiscriminator[:]):
+	case bytes.Equal(instr.Data[:8], pumpswap.Instruction_Buy[:]),
+		bytes.Equal(instr.Data[:8], pumpswap.Instruction_BuyExactQuoteIn[:]):
 		// BUY: sell sol buy other
 		tx.InputMint = p.allAccountKeys[instr.Accounts[quoteMintIndex]]
 		tx.OutputMint = p.allAccountKeys[instr.Accounts[baseMintIndex]]
 		tx.PoolIn = p.allAccountKeys[instr.Accounts[quotePoolIndex]]
 		tx.PoolOut = p.allAccountKeys[instr.Accounts[basePoolIndex]]
 
-	case bytes.Equal(instr.Data[:8], PumpFunAMMSellDiscriminator[:]),
+	case bytes.Equal(instr.Data[:8], pumpswap.Instruction_Sell[:]),
 		bytes.Equal(instr.Data[:8], PumpFunAMMSellExactInDiscriminator[:]):
 		// SELL: sell other buy sol
 		tx.InputMint = p.allAccountKeys[instr.Accounts[baseMintIndex]]

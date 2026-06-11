@@ -389,9 +389,15 @@ func (p *Parser) ProcessSwapData(swapDatas []SwapData) (*SwapInfo, *TxInfo, erro
 
 			seenAMMs := make(map[string]bool)
 			for _, sd := range otherSwaps {
-				if !seenAMMs[string(sd.Type)] {
-					swapInfo.AMMs = append(swapInfo.AMMs, string(sd.Type))
-					seenAMMs[string(sd.Type)] = true
+				// Prefer the resolved protocol label (e.g. "AlphaQ", "GoonFi V2") over the
+				// coarse SwapData.Type, which can be UNKNOWN for layout-only AMMs.
+				name := string(sd.Type)
+				if sd.Tx != nil && sd.Tx.Protocol != "" {
+					name = sd.Tx.Protocol
+				}
+				if !seenAMMs[name] {
+					swapInfo.AMMs = append(swapInfo.AMMs, name)
+					seenAMMs[name] = true
 				}
 			}
 			swapInfo.Timestamp = time.Now()
@@ -495,22 +501,64 @@ func (p *Parser) processRouterSwaps(instructionIndex int) []SwapData {
 		progID := p.allAccountKeys[inner.ProgramIDIndex]
 
 		pr, ok := lookupParser(progID)
-		if !ok || pr.Kind() != KindAMM {
+		if ok && pr.Kind() == KindAMM {
+			if d, ok := pr.(routerDeduper); ok {
+				key := d.dedupKey()
+				if processedProtocols[key] {
+					continue
+				}
+				processedProtocols[key] = true
+			}
+			if innerSwaps := pr.ParseInner(p, instructionIndex, idx, inner); len(innerSwaps) > 0 {
+				swaps = append(swaps, innerSwaps...)
+			}
 			continue
 		}
-		if d, ok := pr.(routerDeduper); ok {
-			key := d.dedupKey()
-			if processedProtocols[key] {
+
+		// Generic fallback: a layout-only AMM (registered via RegisterLayout, no
+		// dedicated parser — e.g. AlphaQ, GoonFi, SolFi) reached under a router.
+		// Scan the leg's SPL transfers and resolve pool info via the shared helper.
+		if _, hasLayout := lookupLayout(progID); hasLayout {
+			legTransfers := p.collectRouterLegTransfers(innerInstructions, idx)
+			if len(legTransfers) < 2 {
 				continue
 			}
-			processedProtocols[key] = true
-		}
-		if innerSwaps := pr.ParseInner(p, instructionIndex, idx, inner); len(innerSwaps) > 0 {
-			swaps = append(swaps, innerSwaps...)
+			tx, err := p.parseTransferTxInfo(progID, instructionIndex, UNKNOWN, legTransfers, &innerInstructions[idx])
+			if err != nil {
+				p.Log.Warnf("router layout-AMM leg: setTxPoolInfo: %s", err)
+				continue
+			}
+			swaps = append(swaps, SwapData{Type: UNKNOWN, Tx: tx})
 		}
 	}
 
 	return swaps
+}
+
+// collectRouterLegTransfers gathers the SPL transfers belonging to a single AMM leg
+// inside a router's inner instructions, starting at startIdx and stopping when another
+// known AMM is encountered (so transfers from a following leg are not mixed in).
+func (p *Parser) collectRouterLegTransfers(inners []solana.CompiledInstruction, startIdx int) []SwapData {
+	var legTransfers []SwapData
+	for i := startIdx; i < len(inners); i++ {
+		ii := inners[i]
+		if i > startIdx {
+			if p.isKnownAMM(p.allAccountKeys[ii.ProgramIDIndex]) {
+				break
+			}
+		}
+		switch {
+		case p.isTransfer(ii):
+			if t := p.processTransfer(ii); t != nil {
+				legTransfers = append(legTransfers, SwapData{Type: UNKNOWN, Data: t})
+			}
+		case p.isTransferCheck(ii):
+			if t := p.processTransferCheck(ii); t != nil {
+				legTransfers = append(legTransfers, SwapData{Type: UNKNOWN, Data: t})
+			}
+		}
+	}
+	return legTransfers
 }
 
 func (p *Parser) getInnerInstructions(index int) []solana.CompiledInstruction {
@@ -916,7 +964,7 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 		poolAccountIndex = 0
 		poolInAccountIndex = 7
 		poolOutAccountIndex = 8
-		protocol = string(PUMP_FUN)
+		protocol = string(PUMPSWAP)
 	case progID.Equals(PUMP_FUN_PROGRAM_ID):
 		// Pump.fun bonding curve — discriminator determines V1 vs V2 account layout.
 		// V1 (buy / buy_exact_sol_in / sell): pool=3, poolIn=4
