@@ -14,14 +14,13 @@ var (
 	PumpFunAMMSellEventDiscriminator = [16]byte{228, 69, 165, 46, 81, 203, 154, 29, 62, 47, 55, 10, 165, 3, 220, 42}
 	PumpFunAMMBuyEventDiscriminator  = [16]byte{228, 69, 165, 46, 81, 203, 154, 29, 103, 244, 82, 31, 44, 245, 119, 119}
 
-	PumpFunAMMSellDiscriminator         = [8]byte{51, 230, 133, 164, 1, 127, 131, 173}
-	PumpFunAMMBuyDiscriminator          = [8]byte{102, 6, 61, 18, 1, 218, 235, 234}
+	// PumpFun AMM (pAMMBay…) swap discriminators. The buy/sell values coincide with the
+	// bonding-curve global:buy / global:sell hashes but are used in AMM context here.
+	// buy_exact_quote_in / sell_exact_in are AMM-only (no IDL), so they stay hardcoded.
+	PumpFunAMMSellDiscriminator            = [8]byte{51, 230, 133, 164, 1, 127, 131, 173}
+	PumpFunAMMBuyDiscriminator             = [8]byte{102, 6, 61, 18, 1, 218, 235, 234}
 	PumpFunAMMBuyExactQuoteInDiscriminator = [8]byte{198, 46, 21, 82, 180, 217, 232, 112}
 	PumpFunAMMSellExactInDiscriminator     = [8]byte{149, 39, 222, 155, 211, 124, 152, 26}
-	// Pump.fun bonding curve V2 discriminators (added post buy_exact_quote_in_v2 / sell_v2 upgrade)
-	PumpFunBuyExactSolInDiscriminator  = [8]byte{56, 252, 116, 8, 158, 223, 205, 95}
-	PumpFunSellV2Discriminator         = [8]byte{93, 246, 130, 60, 231, 233, 64, 178}
-	PumpFunBuyExactQuoteInV2Discriminator = [8]byte{194, 171, 28, 70, 104, 77, 91, 47}
 )
 
 type PumpfunAMMBuyEvent struct {

@@ -8,16 +8,16 @@ import (
 
 // Manifest swap discriminators
 const (
-	manifestSwapDiscriminator  = 4  // Swap instruction
+	manifestSwapDiscriminator   = 4  // Swap instruction
 	manifestSwapV2Discriminator = 13 // SwapV2 instruction (separate owner)
 )
 
 // ManifestSwapParams mirrors the Borsh-serialized SwapParams struct
 type ManifestSwapParams struct {
-	InAtoms    uint64
-	OutAtoms   uint64
-	IsBaseIn   bool
-	IsExactIn  bool
+	InAtoms   uint64
+	OutAtoms  uint64
+	IsBaseIn  bool
+	IsExactIn bool
 }
 
 func (p *Parser) processManifestSwaps(instructionIndex int, isInner bool) []SwapData {

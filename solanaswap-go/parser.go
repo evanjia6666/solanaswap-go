@@ -1,6 +1,7 @@
 package solanaswapgo
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -10,6 +11,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/franco-bianco/solanaswap-go/solanaswap-go/defi/orca/orca_whirlpool"
+	"github.com/franco-bianco/solanaswap-go/solanaswap-go/defi/pumpfun"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/shopspring/decimal"
@@ -23,33 +26,7 @@ const (
 	PROTOCOL_PUMPFUN = "pumpfun"
 )
 
-// routerPrograms 包含所有只需要委托 inner-instruction 解析的 router 程序。
 // 新增此类 router 时只需把 Program ID 加进这个 slice，无需修改 ParseTransaction 的 switch。
-var routerPrograms = []solana.PublicKey{
-	BANANA_GUN_PROGRAM_ID,
-	MINTECH_PROGRAM_ID,
-	BLOOM_PROGRAM_ID,
-	NOVA_PROGRAM_ID,
-	MAESTRO_PROGRAM_ID,
-	JUPITER_DCA_PROGRAM_ID,
-	THREE_Q_ROUTER_PROGRAM_ID,
-	BITGET_SWAP_PROGRAM_ID,
-	BITGET_DEX_AGGREGATOR_PROGRAM_ID,
-	BINANCE_WALLET_PROGRAM_ID,
-	AXIOM_TRADE_PROGRAM_ID,
-	ARBITRAGE_BOT_3S1R_PROGRAM_ID,
-	ARBITRAGE_BOT_B7QNN_PROGRAM_ID,
-	solana.MustPublicKeyFromBase58("AP51WLiiqTdbZfgyRMs35PsZpdmLuPDdHYmrB23pEtMU"),
-}
-
-func isRouterProgram(progID solana.PublicKey) bool {
-	for _, r := range routerPrograms {
-		if progID.Equals(r) {
-			return true
-		}
-	}
-	return false
-}
 
 type TokenTransfer struct {
 	mint     string
@@ -70,47 +47,56 @@ type Parser struct {
 
 var (
 	swapDiscriminator = map[string]bool{
-		calculateDiscriminator("global:swap"):                   true,
-		calculateDiscriminator("global:swap_exact_out"):         true,
-		calculateDiscriminator("global:swap_exact_in"):          true,
-		calculateDiscriminator("global:swap_base_input"):        true,
-		calculateDiscriminator("global:swap_base_output"):       true,
-		calculateDiscriminator("global:swap_v2"):                true,
-		calculateDiscriminator("global:swap_with_price_impact"): true,
-		calculateDiscriminator("global:swap_exact_amount_in"):   true,
-		calculateDiscriminator("global:sell_token"):             true,
-		calculateDiscriminator("global:swap_with_partner"):      true,
-		calculateDiscriminator("global:redeem_v0"):              true,
-		calculateDiscriminator("global:sell"):                   true, // pumpfun AMM
-		calculateDiscriminator("global:buy"):                    true, // pumpfun AMM
-		calculateDiscriminator("global:buy_exact_quote_in"):     true, // pumpfun AMM
-		calculateDiscriminator("global:sell_exact_in"):          true, // pumpfun AMM
-		calculateDiscriminator("global:swap2"):                  true, // meteora dlmm
-		calculateDiscriminator("global:swap_exact_out2"):        true, // meteora dlmm
+		calculateDiscriminator("global:swap"):                    true,
+		calculateDiscriminator("global:swap_exact_out"):          true,
+		calculateDiscriminator("global:swap_exact_in"):           true,
+		calculateDiscriminator("global:swap_base_input"):         true,
+		calculateDiscriminator("global:swap_base_output"):        true,
+		calculateDiscriminator("global:swap_v2"):                 true,
+		calculateDiscriminator("global:swap_with_price_impact"):  true,
+		calculateDiscriminator("global:swap_exact_amount_in"):    true,
+		calculateDiscriminator("global:sell_token"):              true,
+		calculateDiscriminator("global:swap_with_partner"):       true,
+		calculateDiscriminator("global:redeem_v0"):               true,
+		calculateDiscriminator("global:sell"):                    true, // pumpfun AMM
+		calculateDiscriminator("global:buy"):                     true, // pumpfun AMM
+		calculateDiscriminator("global:buy_exact_quote_in"):      true, // pumpfun AMM
+		calculateDiscriminator("global:sell_exact_in"):           true, // pumpfun AMM
+		calculateDiscriminator("global:swap2"):                   true, // meteora dlmm
+		calculateDiscriminator("global:swap_exact_out2"):         true, // meteora dlmm
 		calculateDiscriminator("global:swap_with_price_impact2"): true, // meteora dlmm
-		calculateDiscriminator("global:route_v2"):               true, // raydium cl (via jupiter)
+		calculateDiscriminator("global:route_v2"):                true, // raydium cl (via jupiter)
+		calculateDiscriminator("global:swap_router_base_in"):     true, // raydium cl / pancakeswap
 	}
 
 	removeDiscriminator = map[string]bool{
-		calculateDiscriminator("global:remove_liquidity_by_range"): true,
-		calculateDiscriminator("global:remove_liquidity"):          true,
-		calculateDiscriminator("global:remove_all_liquidity"):      true,
-		calculateDiscriminator("global:decrease_liquidity"):        true,
-		calculateDiscriminator("global:decrease_liquidity_v2"):     true,
-		calculateDiscriminator("global:decrease_liquidity_v3"):     true,
-		calculateDiscriminator("global:withdraw"):                  true,
-		calculateDiscriminator("global:close_position"):            true,
-		calculateDiscriminator("global:collect_protocol_fee"):      true,
+		calculateDiscriminator("global:remove_liquidity_by_range"):    true,
+		calculateDiscriminator("global:remove_liquidity_by_range2"):   true, // meteora dlmm
+		calculateDiscriminator("global:remove_liquidity"):             true,
+		calculateDiscriminator("global:remove_liquidity2"):            true, // meteora dlmm
+		calculateDiscriminator("global:remove_all_liquidity"):         true,
+		calculateDiscriminator("global:remove_balance_liquidity"):     true, // meteora pools
+		calculateDiscriminator("global:remove_liquidity_single_side"): true, // meteora pools
+		calculateDiscriminator("global:decrease_liquidity"):           true,
+		calculateDiscriminator("global:decrease_liquidity_v2"):        true,
+		calculateDiscriminator("global:decrease_liquidity_v3"):        true,
+		calculateDiscriminator("global:withdraw"):                     true,
+		calculateDiscriminator("global:close_position"):               true,
+		calculateDiscriminator("global:collect_protocol_fee"):         true,
 	}
 
 	addDiscriminator = map[string]bool{
-		calculateDiscriminator("global:add_liquidity"):             true,
-		calculateDiscriminator("global:add_liquidity_by_weight"):   true,
-		calculateDiscriminator("global:add_liquidity_by_strategy"): true,
-		calculateDiscriminator("global:increase_liquidity"):        true,
-		calculateDiscriminator("global:increase_liquidity_v2"):     true,
-		calculateDiscriminator("global:deposit"):                   true,
-		calculateDiscriminator("global:initialize"):                true,
+		calculateDiscriminator("global:add_liquidity"):              true,
+		calculateDiscriminator("global:add_liquidity2"):             true, // meteora dlmm
+		calculateDiscriminator("global:add_liquidity_by_weight"):    true,
+		calculateDiscriminator("global:add_liquidity_by_strategy"):  true,
+		calculateDiscriminator("global:add_liquidity_by_strategy2"): true, // meteora dlmm
+		calculateDiscriminator("global:add_balance_liquidity"):      true, // meteora pools
+		calculateDiscriminator("global:add_imbalance_liquidity"):    true, // meteora pools
+		calculateDiscriminator("global:increase_liquidity"):         true,
+		calculateDiscriminator("global:increase_liquidity_v2"):      true,
+		calculateDiscriminator("global:deposit"):                    true,
+		calculateDiscriminator("global:initialize"):                 true,
 	}
 )
 
@@ -171,77 +157,64 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 	skip := false
 	for i, outerInstruction := range p.txInfo.Message.Instructions {
 		progID := p.allAccountKeys[outerInstruction.ProgramIDIndex]
-		switch {
-		case progID.Equals(JUPITER_PROGRAM_ID) || progID.Equals(DFLOW_AGGREGATOR_V4):
+		pr, ok := lookupParser(progID)
+		if !ok {
+			continue
+		}
+		if pr.Kind() != KindAMM {
 			skip = true
-			jupiterSwaps := p.processJupiterSwaps(i)
-			if len(jupiterSwaps) > 0 {
-				parsedSwaps = append(parsedSwaps, jupiterSwaps...)
-			} else {
-				// Fallback: RouteV2 or other newer Jupiter instructions may not emit
-				// JupiterRouteEvent. In that case scan inner instructions like a
-				// normal router.
-				parsedSwaps = append(parsedSwaps, p.processRouterSwaps(i)...)
-			}
-		case progID.Equals(MOONSHOT_PROGRAM_ID):
-			skip = true
-			parsedSwaps = append(parsedSwaps, p.processMoonshotSwaps()...)
-		case progID.Equals(OKX_LABS_1_PROGRAM_ID):
-			skip = true
-			parsedSwaps = append(parsedSwaps, p.processOKXSwaps(i)...)
-		case progID.Equals(OKX_LABS_2_PROGRAM_ID):
-			skip = true
-			parsedSwaps = append(parsedSwaps, p.processOKXLabs2SwapEvents(i)...)
-		case progID.Equals(RAYDIUM_AMM_ROUTER_PROGRAM_ID):
-			skip = true
-			parsedSwaps = append(parsedSwaps, p.processRaydSwaps(RAYDIUM_AMM_ROUTER_PROGRAM_ID, i, 0, &outerInstruction, true)...)
-		case isRouterProgram(progID):
-			if innerSwaps := p.processRouterSwaps(i); len(innerSwaps) > 0 {
-				parsedSwaps = append(parsedSwaps, innerSwaps...)
-			}
+			parsedSwaps = append(parsedSwaps, pr.ParseOuter(p, i)...)
 		}
 	}
 	if skip {
-		return parsedSwaps, nil
+		return p.filterInvalidSwaps(parsedSwaps), nil
 	}
 
 	for i, outerInstruction := range p.txInfo.Message.Instructions {
 		progID := p.allAccountKeys[outerInstruction.ProgramIDIndex]
-		switch {
-		case progID.Equals(RAYDIUM_V4_PROGRAM_ID) ||
-			progID.Equals(RAYDIUM_CPMM_PROGRAM_ID) ||
-			// progID.Equals(RAYDIUM_AMM_ROUTER_PROGRAM_ID) ||
-			progID.Equals(RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID) ||
-			progID.Equals(RAYDIUM_LAUNCHLAB_PROGRAM_ID):
-			parsedSwaps = append(parsedSwaps, p.processRaydSwaps(progID, i, 0, &outerInstruction, false)...)
-		case progID.Equals(ORCA_PROGRAM_ID):
-			parsedSwaps = append(parsedSwaps, p.processOrcaSwaps(i, nil)...)
-		case progID.Equals(METEORA_PROGRAM_ID) || progID.Equals(METEORA_POOLS_PROGRAM_ID) || progID.Equals(METEORA_DLMM_PROGRAM_ID) ||
-			progID.Equals(BYREAL_CLMM_PROGRAM_ID) ||
-			progID.Equals(Meteora_Dynamic_Bonding_Curve_Program) ||
-			progID.Equals(METEORA_DAMM_V2):
-			meteoraSwaps := p.processMeteoraSwaps(progID, i, 0, false)
-			if len(meteoraSwaps) > 0 {
-				parsedSwaps = append(parsedSwaps, meteoraSwaps...)
-			} else {
-				// Fallback: some Meteora programs act as routers (e.g. King7ki... DLMM router)
-				parsedSwaps = append(parsedSwaps, p.processRouterSwaps(i)...)
-			}
-		case progID.Equals(PUMPFUN_AMM_PROGRAM_ID):
-			parsedSwaps = append(parsedSwaps, p.processPumpfunAMMSwaps(i, false)...)
-		case progID.Equals(ZEROFI):
-			parsedSwaps = append(parsedSwaps, p.processZerofiSwaps(i, false)...)
-		case progID.Equals(MANIFEST_PROGRAM_ID):
-			parsedSwaps = append(parsedSwaps, p.processManifestSwaps(i, false)...)
-		case progID.Equals(HUMIDIDI_PROGRAM_ID):
-			parsedSwaps = append(parsedSwaps, p.processHumidifiSwaps(i, 0, &outerInstruction)...)
-		case progID.Equals(PUMP_FUN_PROGRAM_ID) ||
-			progID.Equals(solana.MustPublicKeyFromBase58("BSfD6SHZigAfDWSjzD5Q41jw8LmKwtmjskPH9XW1mrRW")):
-			parsedSwaps = append(parsedSwaps, p.processPumpfunSwaps(i)...)
+		pr, ok := lookupParser(progID)
+		if !ok || pr.Kind() != KindAMM {
+			continue
 		}
+		parsedSwaps = append(parsedSwaps, pr.ParseOuter(p, i)...)
 	}
 
-	return parsedSwaps, nil
+	return p.filterInvalidSwaps(parsedSwaps), nil
+}
+
+// filterInvalidSwaps is a final safeguard: it drops any SwapData whose Tx carries the
+// System Program address (11111111111111111111111111111111) in a key address field.
+// Such a value means a pool/mint/vault account failed to resolve, so the leg is unsafe
+// to return. Legs without a Tx (event-only data) are passed through untouched.
+func (p *Parser) filterInvalidSwaps(swaps []SwapData) []SwapData {
+	filtered := make([]SwapData, 0, len(swaps))
+	for _, s := range swaps {
+		if s.Tx != nil && txHasSystemProgramAddress(s.Tx) {
+			p.Log.Warnf("dropping swap leg with System Program address, protocol=%s sig=%v", s.Tx.Protocol, p.txInfo.Signatures)
+			continue
+		}
+		// For a direct swap (no aggregator/bot router), Router is the zero value, which
+		// serializes to the System Program address. Default it to the AMM so callers don't
+		// see an ambiguous "11111111111111111111111111111111" router.
+		if s.Tx != nil && s.Tx.Router.IsZero() {
+			s.Tx.Router = s.Tx.Amm
+		}
+		filtered = append(filtered, s)
+	}
+	return filtered
+}
+
+// txHasSystemProgramAddress reports whether any key address field of tx equals the
+// System Program ID, which signals an unresolved account.
+func txHasSystemProgramAddress(tx *TxInfo) bool {
+	for _, addr := range []solana.PublicKey{
+		tx.Amm, tx.InputMint, tx.OutputMint, tx.Pool, tx.PoolIn, tx.PoolOut,
+	} {
+		if addr.Equals(solana.SystemProgramID) {
+			return true
+		}
+	}
+	return false
 }
 
 type SwapInfo struct {
@@ -521,56 +494,19 @@ func (p *Parser) processRouterSwaps(instructionIndex int) []SwapData {
 	for idx, inner := range innerInstructions {
 		progID := p.allAccountKeys[inner.ProgramIDIndex]
 
-		switch {
-		case (progID.Equals(RAYDIUM_V4_PROGRAM_ID) ||
-			progID.Equals(RAYDIUM_CPMM_PROGRAM_ID) ||
-			// progID.Equals(RAYDIUM_AMM_ROUTER_PROGRAM_ID) ||
-			progID.Equals(RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID)) && !processedProtocols[PROTOCOL_RAYDIUM]:
-			processedProtocols[PROTOCOL_RAYDIUM] = true
-			if raydSwaps := p.processRaydSwaps(progID, instructionIndex, idx, &inner, true); len(raydSwaps) > 0 {
-				swaps = append(swaps, raydSwaps...)
+		pr, ok := lookupParser(progID)
+		if !ok || pr.Kind() != KindAMM {
+			continue
+		}
+		if d, ok := pr.(routerDeduper); ok {
+			key := d.dedupKey()
+			if processedProtocols[key] {
+				continue
 			}
-
-		case progID.Equals(ORCA_PROGRAM_ID) && !processedProtocols[PROTOCOL_ORCA]:
-			processedProtocols[PROTOCOL_ORCA] = true
-			if orcaSwaps := p.processOrcaSwaps(instructionIndex, &inner); len(orcaSwaps) > 0 {
-				swaps = append(swaps, orcaSwaps...)
-			}
-
-		case (progID.Equals(METEORA_PROGRAM_ID) ||
-			progID.Equals(METEORA_POOLS_PROGRAM_ID) ||
-			progID.Equals(METEORA_DLMM_PROGRAM_ID) ||
-			progID.Equals(BYREAL_CLMM_PROGRAM_ID) ||
-			progID.Equals(METEORA_DAMM_V2)) && !processedProtocols[PROTOCOL_METEORA]:
-			processedProtocols[PROTOCOL_METEORA] = true
-			if meteoraSwaps := p.processMeteoraSwaps(progID, instructionIndex, idx, true); len(meteoraSwaps) > 0 {
-				swaps = append(swaps, meteoraSwaps...)
-			}
-
-		case progID.Equals(PUMPFUN_AMM_PROGRAM_ID) && !processedProtocols[PROTOCOL_PUMPFUN]:
-			processedProtocols[PROTOCOL_PUMPFUN] = true
-			if pumpfunAMMSwaps := p.processPumpfunAMMSwaps(instructionIndex, true); len(pumpfunAMMSwaps) > 0 {
-				swaps = append(swaps, pumpfunAMMSwaps...)
-			}
-
-		case (progID.Equals(PUMP_FUN_PROGRAM_ID) ||
-			progID.Equals(solana.MustPublicKeyFromBase58("BSfD6SHZigAfDWSjzD5Q41jw8LmKwtmjskPH9XW1mrRW"))) && !processedProtocols[PROTOCOL_PUMPFUN]:
-			processedProtocols[PROTOCOL_PUMPFUN] = true
-			if pumpfunSwaps := p.processPumpfunSwaps(instructionIndex); len(pumpfunSwaps) > 0 {
-				swaps = append(swaps, pumpfunSwaps...)
-			}
-		case progID.Equals(ZEROFI):
-			if zerofiSwaps := p.processZerofiSwaps(instructionIndex, true); len(zerofiSwaps) > 0 {
-				swaps = append(swaps, zerofiSwaps...)
-			}
-		case progID.Equals(HUMIDIDI_PROGRAM_ID):
-			if humidifiSwaps := p.processHumidifiSwaps(instructionIndex, idx, &inner); len(humidifiSwaps) > 0 {
-				swaps = append(swaps, humidifiSwaps...)
-			}
-		case progID.Equals(MANIFEST_PROGRAM_ID):
-			if manifestSwaps := p.processManifestSwaps(instructionIndex, true); len(manifestSwaps) > 0 {
-				swaps = append(swaps, manifestSwaps...)
-			}
+			processedProtocols[key] = true
+		}
+		if innerSwaps := pr.ParseInner(p, instructionIndex, idx, inner); len(innerSwaps) > 0 {
+			swaps = append(swaps, innerSwaps...)
 		}
 	}
 
@@ -616,6 +552,12 @@ type TxInfo struct {
 }
 
 func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction solana.CompiledInstruction) (err error) {
+	// New path: simple ACCOUNT_INDEX programs registered via RegisterLayout resolve
+	// through the shared resolvePoolInfo service. Falls through to the legacy switch
+	// for everything not yet migrated.
+	if l, ok := lookupLayout(progID); ok {
+		return p.resolvePoolInfo(tx, instruction, l)
+	}
 	var discriminatorLen = 8
 	var discriminatorWhiteList [][]byte
 	var poolAccountIndex, poolInAccountIndex, poolOutAccountIndex uint16
@@ -665,21 +607,20 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 	case progID.Equals(ORCA_PROGRAM_ID):
 		protocol = string(ORCA)
 		if len(instruction.Data) >= discriminatorLen {
-			discHex := hex.EncodeToString(instruction.Data[:discriminatorLen])
-			// swap_v2 discriminator: global:swap_v2 -> 2b04ed0b1ac91e62
-			// swap discriminator: global:swap -> f8c69e91e17587c8
-			switch discHex {
-			case "2b04ed0b1ac91e62":
+			disc := instruction.Data[:discriminatorLen]
+			switch {
+			case bytes.Equal(disc, orca_whirlpool.Instruction_SwapV2[:]):
 				// swap_v2: token_program_a, token_program_b, memo_program, token_authority, whirlpool, token_mint_a, token_mint_b, token_owner_account_a, token_vault_a, token_owner_account_b, token_vault_b, tick_arrays..., oracle
 				poolAccountIndex = 4
 				poolInAccountIndex = 8
 				poolOutAccountIndex = 10
-			case "f8c69e91e17587c8":
+			case bytes.Equal(disc, orca_whirlpool.Instruction_Swap[:]):
 				// swap: token_program, token_authority, whirlpool, token_owner_a, token_vault_a, token_owner_b, token_vault_b, tick_arrays..., oracle
 				poolAccountIndex = 2
 				poolInAccountIndex = 4
 				poolOutAccountIndex = 6
 			default:
+				discHex := hex.EncodeToString(disc)
 				if _, ok := removeDiscriminator[discHex]; ok {
 					tx.Type = TxTypeRemove
 					poolAccountIndex = 0
@@ -986,12 +927,12 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 		}
 		disc := [8]byte(instruction.Data[:8])
 		switch disc {
-		case PumpFunAMMBuyDiscriminator, PumpFunBuyExactSolInDiscriminator, PumpFunAMMSellDiscriminator, PumpFunAMMSellExactInDiscriminator:
+		case pumpfun.Instruction_Buy, pumpfun.Instruction_BuyExactSolIn, pumpfun.Instruction_Sell, PumpFunAMMSellExactInDiscriminator:
 			// V1 layout: accounts[3]=bonding_curve, accounts[4]=associated_bonding_curve
 			poolAccountIndex = 3
 			poolInAccountIndex = 4
 			poolOutAccountIndex = 4
-		case PumpFunBuyExactQuoteInV2Discriminator, PumpFunSellV2Discriminator:
+		case pumpfun.Instruction_BuyExactQuoteInV2, pumpfun.Instruction_SellV2, pumpfun.Instruction_BuyV2:
 			// V2 layout: accounts[10]=bonding_curve, accounts[11]=associated_base_bonding_curve, accounts[12]=associated_quote_bonding_curve
 			poolAccountIndex = 10
 			poolInAccountIndex = 11

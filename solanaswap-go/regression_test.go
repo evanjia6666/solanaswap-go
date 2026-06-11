@@ -161,6 +161,20 @@ func TestRegression_AllCases(t *testing.T) {
 				{"Meteora_DLMM_Program", "So11111111111111111111111111111111111111112", "F5tfztTnE4sYsMhZT5KrFpWvHmYSfJZoRjCuxKPbpump", 5594069444, 353707088201, "Cy4ZW25mnXpwD1XUUio8V6bPjpVBDCXJ58fkcZaAKuoS", "6E1GqE5UhfAp5TzwYSJ7ZLoQj6iRHGKVESrrpKJktRLr", "EicNhnTaz71ywa3e2PicmXQ991UG7XYwnovmwdGdxar3", "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"},
 			},
 		},
+		{
+			name: "Pump.fun sell_v2",
+			sig:  "1V9YFzcemLncSAfAAySCe2hevfo829Wrnt6zPvMYi5yPYwoMzfJBKVYtiJpwgSPPmeZjcBzRgJwavaGqCYjnyLM",
+			expected: []legExpectation{
+				{string(PUMP_FUN), "816srPYEjj2tKRWvrjKZ1gnSea3QCs1HrLkw8M2zpump", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 2236910234, 9874, "7egVXQix5F7ZSftWFRdBkGpWMq4qPccR5bokY2FWzt62", "8TUcFCbC6mSs4HNwZb2Xk2wG6m9Z6sZXX9Q3zq5h2HYC", "31fp8ihLuprW1XFPz9X1iUAvPqSsCAo8QVkYpZ7SNnQN", "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P"},
+			},
+		},
+		{
+			name: "Pump.fun buy_v2",
+			sig:  "UsNewgnk1WR3mqJuurs97xb1kTMngPVwQ39EXdUUTcQa1jvGt5ZwK3Fdn5izGzVAJCHNaR4a137EtJQKw7rDNq4",
+			expected: []legExpectation{
+				{string(PUMP_FUN), "So11111111111111111111111111111111111111112", "CWtjWZsgP5iKJ6qqb6FWBeDt5RWDZxdvn7WCHwhpump", 50000001, 1785357772752, "BN2VRinDQcMPLC8QyXRY3ZhwfRoMb4xcT83VbrvXVach", "Bdd7GpKt9EPoKs7yyRVLuUHhG76AZMapFCqmNoyAMNhm", "GJCQwY6WKSSMLkCHf7t8fEJwLFsAnXyFoJARBrc4tkMF", "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P"},
+			},
+		},
 	}
 
 	for _, tt := range tests {

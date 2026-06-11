@@ -84,18 +84,18 @@ func (p *Parser) processJupiterSwaps(instructionIndex int) []SwapData {
 					if err != nil {
 						p.Log.Errorf("error processing SwapsEvent: %s", err)
 					}
-				startIdx := len(swaps)
-				for ei, eventData := range eventDataList {
-					tx := p.parseJupiterTxInfo(eventData, innerInstructionSet, last)
-					if ei < len(inferredAMMs) {
-						tx.Amm = inferredAMMs[ei]
-						tx.Protocol = protocolFromAMM(inferredAMMs[ei])
+					startIdx := len(swaps)
+					for ei, eventData := range eventDataList {
+						tx := p.parseJupiterTxInfo(eventData, innerInstructionSet, last)
+						if ei < len(inferredAMMs) {
+							tx.Amm = inferredAMMs[ei]
+							tx.Protocol = protocolFromAMM(inferredAMMs[ei])
+						}
+						if !p.setPoolInfoFromAMM(tx, ammInstrs, startIdx+ei) {
+							continue
+						}
+						swaps = append(swaps, SwapData{Type: JUPITER, Data: eventData, Tx: tx})
 					}
-					if !p.setPoolInfoFromAMM(tx, ammInstrs, startIdx+ei) {
-						continue
-					}
-					swaps = append(swaps, SwapData{Type: JUPITER, Data: eventData, Tx: tx})
-				}
 					last = i
 				}
 			}
