@@ -35,6 +35,20 @@ func TestRegression_AllCases(t *testing.T) {
 		expected []legExpectation
 	}{
 		{
+			// Jupiter SwapsEvent (112-byte entries with trailing Amm, added 2026-08).
+			// Pre-fix decoding desynced from entry 1 onward and read mint pubkey bytes
+			// as amounts (e.g. 4228277238345956038 = first 8 bytes of the USDC mint),
+			// inflating production volume ~1e9x. Real amounts verified against the
+			// tx token balance deltas.
+			name: "Jupiter SwapsEvent 112B (Tessera V)",
+			sig:  "4ohi3z3AZFckSZn6d2HfhEqXhx9N9DRTMAz9oJ4YhiDbc86dptbtDkZpxhrpGX1AYUKrVoGmvHC65qEE3E9iMWA1",
+			expected: []legExpectation{
+				{"Manifest", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", 7081025, 7082902, "8sjV1AqBFvFuADBCQHhotaRq5DFFYSjjg1jMyVWMqXvZ", "FGQoLafigpyVb7mLa6pvsDDpDaEE3JetrzQoAggTo3n7", "CNRQ2Q5YURFcQrATzYeKUWgKUoBDfqzkDrRWf21UXCVo", "MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms"},
+				{"Tessera V", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "So11111111111111111111111111111111111111112", 253785, 2475810, "FLckHLGMJy5gEoXWwcE68Nprde1D4araK4TGLw4pQq2n", "9t4P5wMwfFkyn92Z7hf463qYKEZf8ERVZsGBEPNp8uJx", "5pVN5XZB8cYBjNLFrsBCPWkCQBan5K5Mq2dWGzwPgGJV", "TessVdML9pBGgG9yGks7o4HewRaXVAMuoVj4x83GLQH"},
+				{"Orca", "So11111111111111111111111111111111111111112", "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", 2475810, 253798, "B6LL9aCWVuo1tTcJoYvCTDqYrq1vjMfci8uHxsm4UxTR", "5PAmrLHaPnH95QqiCQ5x9Hn5MPGQZmQhKuL1kyS24r7G", "vZ7uh4khfcUHKyc1dyaDhg21jDH5p5q4Pugr3R4v4Mp", "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"},
+			},
+		},
+		{
 			name: "Bitget Swap — Multi-leg",
 			sig:  "5JtAbkDqdDqKRd5dfEpYFBAFiBP6zTDwtx6kEfUJxiyK197Vgb5yYnTw7DYxjzSdbnqTr6CknpgErLADEa2SrkQh",
 			expected: []legExpectation{
