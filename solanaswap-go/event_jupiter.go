@@ -1,6 +1,7 @@
 package solanaswapgo
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 
@@ -250,17 +251,31 @@ func (p *Parser) parseSwapsEventInstruction(instruction solana.CompiledInstructi
 	if err != nil {
 		return nil, fmt.Errorf("error decoding instruction data: %s", err)
 	}
-	decoder := ag_binary.NewBorshDecoder(decodedBytes[16:])
+	body := decodedBytes[16:]
 
-	var vecLen uint32
-	if err := decoder.Decode(&vecLen); err != nil {
-		return nil, fmt.Errorf("error reading SwapsEvent vec length: %s", err)
+	if len(body) < 4 {
+		return nil, fmt.Errorf("SwapsEvent payload too short: %d bytes", len(body))
+	}
+	vecLen := binary.LittleEndian.Uint32(body[:4])
+	rest := len(body) - 4
+	if vecLen == 0 || rest%int(vecLen) != 0 {
+		return nil, fmt.Errorf("invalid SwapsEvent vecLen %d for payload of %d bytes", vecLen, rest)
+	}
+	stride := rest / int(vecLen)
+	// Jupiter added a trailing 32-byte Amm field to each SwapsEvent entry around
+	// 2026-08-05 (80B -> 112B). The old fixed 80-byte stride desyncs from the first
+	// entry onward on the new layout, turning mint pubkey bytes into amounts and
+	// inflating volume/value by ~1e9. Detect the stride from the payload length so
+	// both layouts decode correctly.
+	if stride != 80 && stride != 112 {
+		return nil, fmt.Errorf("unsupported SwapsEvent entry size %d (vecLen=%d, payload=%d bytes)", stride, vecLen, rest)
 	}
 
 	var events []*JupiterSwapEventData
 	for i := uint32(0); i < vecLen; i++ {
-		var v2 SwapEventV2
-		if err := decoder.Decode(&v2); err != nil {
+		off := 4 + int(i)*stride
+		v2, amm, err := decodeSwapEventV2(body[off : off+stride])
+		if err != nil {
 			return nil, fmt.Errorf("error decoding SwapEventV2[%d]: %s", i, err)
 		}
 
@@ -275,7 +290,7 @@ func (p *Parser) parseSwapsEventInstruction(instruction solana.CompiledInstructi
 
 		events = append(events, &JupiterSwapEventData{
 			JupiterSwapEvent: JupiterSwapEvent{
-				Amm:          solana.PublicKey{},
+				Amm:          amm,
 				InputMint:    v2.InputMint,
 				InputAmount:  v2.InputAmount,
 				OutputMint:   v2.OutputMint,
@@ -286,6 +301,26 @@ func (p *Parser) parseSwapsEventInstruction(instruction solana.CompiledInstructi
 		})
 	}
 	return events, nil
+}
+
+// decodeSwapEventV2 decodes one SwapsEvent entry: {input_mint, input_amount,
+// output_mint, output_amount} plus the trailing 32-byte Amm present in the
+// 112-byte layout introduced by Jupiter in 2026-08 (absent in the legacy 80-byte one).
+func decodeSwapEventV2(b []byte) (SwapEventV2, solana.PublicKey, error) {
+	var amm solana.PublicKey
+	if len(b) < 80 {
+		return SwapEventV2{}, amm, fmt.Errorf("entry too short: %d bytes", len(b))
+	}
+	v2 := SwapEventV2{
+		InputMint:    solana.PublicKeyFromBytes(b[0:32]),
+		InputAmount:  binary.LittleEndian.Uint64(b[32:40]),
+		OutputMint:   solana.PublicKeyFromBytes(b[40:72]),
+		OutputAmount: binary.LittleEndian.Uint64(b[72:80]),
+	}
+	if len(b) >= 112 {
+		copy(amm[:], b[80:112])
+	}
+	return v2, amm, nil
 }
 
 func (p *Parser) extractSPLDecimals() error {

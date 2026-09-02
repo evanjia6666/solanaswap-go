@@ -38,7 +38,10 @@ var genericLayouts = []struct {
 	{"PSwapMdSai8tjrEXcxFeQth87xC4rRsa4VA5mhGhXkP", poolLayout{poolIdx: 0, poolInIdx: 4, poolOutIdx: 5, protocol: "Penguin Finance", discriminatorLen: 1, whitelist: [][]byte{{1}}}},
 	{"PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY", poolLayout{poolIdx: 2, poolInIdx: 6, poolOutIdx: 7, protocol: "Phoenix", discriminatorLen: 1, whitelist: [][]byte{{0}}}},
 	{"HpNfyc2Saw7RKkQd8nEL4khUcuPhQ7WwY1B2qjx8jxFq", poolLayout{poolIdx: 2, poolInIdx: 5, poolOutIdx: 6, protocol: "Pancake Swap"}},
-	{"TessVdML9pBGgG9yGks7o4HewRaXVAMuoVj4x83GLQH", poolLayout{poolIdx: 1, poolInIdx: 4, poolOutIdx: 5, protocol: "Tessera V", discriminatorLen: 1, whitelist: [][]byte{{16}}}},
+	// Tessera V swap: [0]=payer [1]=pool [2]=pool authority [3]=vault SOL/A [4]=vault
+	// B/USDC [5]=fee/treasury (NOT a token account) [6]=user ATA [7,8]=mints ... Account 5
+	// was previously mistaken for the out vault, so reserves resolved to zero.
+	{"TessVdML9pBGgG9yGks7o4HewRaXVAMuoVj4x83GLQH", poolLayout{poolIdx: 1, poolInIdx: 4, poolOutIdx: 3, protocol: "Tessera V", discriminatorLen: 1, whitelist: [][]byte{{16}}}},
 	{"goonuddtQRrWqqn5nFyczVKaie28f3kDkHWkHtURSLE", poolLayout{poolIdx: 1, poolInIdx: 5, poolOutIdx: 4, protocol: "GoonFi V2", discriminatorLen: 1, whitelist: [][]byte{{1}}}},
 	{"SV2EYYJyRz2YhfXwXnhNAevDEui5Q6yrfyo13WtupPF", poolLayout{poolIdx: 1, poolInIdx: 4, poolOutIdx: 5, protocol: "SolFi V2", discriminatorLen: 1, whitelist: [][]byte{{7}}}},
 	{"ALPHAQmeA7bjrVuccPsYPiCvsi428SNwte66Srvs4pHA", poolLayout{poolIdx: 1, poolInIdx: 5, poolOutIdx: 6, protocol: "AlphaQ", discriminatorLen: 1, whitelist: [][]byte{{0x0c}}}},
