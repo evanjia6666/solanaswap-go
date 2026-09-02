@@ -96,7 +96,7 @@ func (d OKXDex) String() string {
 	case OKXDexPancakeSwapV3Swap, OKXDexPancakeSwapV3SwapV2:
 		return "Pancake Swap"
 	case OKXDexPumpfunBuy, OKXDexPumpfunSell, OKXDexPumpfunammBuy, OKXDexPumpfunammSell, OKXDexPumpfunammBuy2, OKXDexPumpfunammSell2:
-		return "PumpFun.AMM"
+		return string(PUMPSWAP)
 	case OKXDexOpenBookV2:
 		return "OpenBook V2"
 	case OKXDexByreal:
@@ -244,9 +244,14 @@ func (p *Parser) processOKXLabs2SwapEvents(instructionIndex int) []SwapData {
 
 		if ammInstr != nil {
 			ammProgID := p.allAccountKeys[ammInstr.ProgramIDIndex]
-			protocol := tx.Protocol
-			p.setTxPoolInfo(ammProgID, tx, *ammInstr)
-			tx.Protocol = protocol
+			if err := p.setTxPoolInfo(ammProgID, tx, *ammInstr); err != nil {
+				continue
+			}
+			// Keep the layout-resolved protocol name (e.g. "GoonFi V2") unless
+			// it was not set — in that case fall back to the OKX dex label.
+			if tx.Protocol == "" {
+				tx.Protocol = se.data.Dex.String()
+			}
 			tx.Amm = ammProgID
 		}
 

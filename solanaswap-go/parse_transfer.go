@@ -342,6 +342,12 @@ func (p *Parser) processHumidifiSwaps(instructionIndex int, innerIdx int, instru
 // isKnownAMM checks if a program ID is a known AMM / DEX program.
 // Used to stop scanning transfers when encountering another AMM in a router tx.
 func (p *Parser) isKnownAMM(progID solana.PublicKey) bool {
+	// After DDD migration, knownAMMSet is populated by Register(ProtocolParser{KindAMM}).
+	// Both the static list and the registry are consulted so RegisterLayout-only AMMs
+	// (GoonFi, SolFi V2, etc.) are also recognized for multi-leg boundary detection.
+	if knownAMMSet[progID] {
+		return true
+	}
 	return progID.Equals(RAYDIUM_V4_PROGRAM_ID) ||
 		progID.Equals(RAYDIUM_CPMM_PROGRAM_ID) ||
 		progID.Equals(RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID) ||
@@ -359,7 +365,10 @@ func (p *Parser) isKnownAMM(progID solana.PublicKey) bool {
 		progID.Equals(HUMIDIDI_PROGRAM_ID) ||
 		progID.Equals(PANCAKE_SWAP_PROGRAM_ID) ||
 		progID.Equals(PHOENIX_PROGRAM_ID) ||
-		progID.Equals(MANIFEST_PROGRAM_ID)
+		progID.Equals(MANIFEST_PROGRAM_ID) ||
+		progID.Equals(GOONFI_PROGRAM_ID) ||
+		progID.Equals(SOLFI_V2_PROGRAM_ID) ||
+		progID.Equals(ALPHAQ_PROGRAM_ID)
 }
 
 func (p *Parser) processTransfer(instr solana.CompiledInstruction) *TransferData {

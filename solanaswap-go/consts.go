@@ -48,6 +48,9 @@ var (
 	OKX_LABS_1_PROGRAM_ID  = solana.MustPublicKeyFromBase58("6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma")
 	PUMPFUN_AMM_PROGRAM_ID = solana.MustPublicKeyFromBase58("pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA")
 	MANIFEST_PROGRAM_ID    = solana.MustPublicKeyFromBase58("MNFSTqtC93rEfYHB6hF82sKdZpUDFWkViLByLd1k1Ms")
+	GOONFI_PROGRAM_ID      = solana.MustPublicKeyFromBase58("goonuddtQRrWqqn5nFyczVKaie28f3kDkHWkHtURSLE")
+	SOLFI_V2_PROGRAM_ID    = solana.MustPublicKeyFromBase58("SV2EYYJyRz2YhfXwXnhNAevDEui5Q6yrfyo13WtupPF")
+	ALPHAQ_PROGRAM_ID      = solana.MustPublicKeyFromBase58("ALPHAQmeA7bjrVuccPsYPiCvsi428SNwte66Srvs4pHA")
 
 	NATIVE_SOL_MINT_PROGRAM_ID = solana.MustPublicKeyFromBase58("So11111111111111111111111111111111111111112")
 	Token2022ProgramID         = solana.MustPublicKeyFromBase58("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb")
@@ -56,7 +59,8 @@ var (
 type SwapType string
 
 const (
-	PUMP_FUN    SwapType = "PumpFun.AMM"
+	PUMP_FUN    SwapType = "PumpFun"
+	PUMPSWAP    SwapType = "PumpSwap"
 	JUPITER     SwapType = "Jupiter"
 	RAYDIUM     SwapType = "Raydium"
 	OKX         SwapType = "OKX"

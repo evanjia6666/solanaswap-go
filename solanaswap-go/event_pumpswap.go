@@ -5,18 +5,20 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/franco-bianco/solanaswap-go/solanaswap-go/defi/pumpswap"
 	ag_binary "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
 	"github.com/mr-tron/base58"
 )
 
 var (
-	PumpFunAMMSellEventDiscriminator = [16]byte{228, 69, 165, 46, 81, 203, 154, 29, 62, 47, 55, 10, 165, 3, 220, 42}
-	PumpFunAMMBuyEventDiscriminator  = [16]byte{228, 69, 165, 46, 81, 203, 154, 29, 103, 244, 82, 31, 44, 245, 119, 119}
 
-	PumpFunAMMSellDiscriminator         = [8]byte{51, 230, 133, 164, 1, 127, 131, 173}
-	PumpFunAMMBuyDiscriminator          = [8]byte{102, 6, 61, 18, 1, 218, 235, 234}
-	PumpFunAMMBuyExactQuoteInDiscriminator = [8]byte{198, 46, 21, 82, 180, 217, 232, 112}
+	// PumpFun AMM (pAMMBay…) swap discriminators, sourced from the pumpswap IDL.
+	// The buy/sell values coincide with the bonding-curve global:buy / global:sell hashes
+	// but are used in AMM context here. sell_exact_in is not in the IDL and stays hardcoded.
+	PumpFunAMMSellDiscriminator            = pumpswap.Instruction_Sell
+	PumpFunAMMBuyDiscriminator             = pumpswap.Instruction_Buy
+	PumpFunAMMBuyExactQuoteInDiscriminator = pumpswap.Instruction_BuyExactQuoteIn
 	PumpFunAMMSellExactInDiscriminator     = [8]byte{149, 39, 222, 155, 211, 124, 152, 26}
 )
 
@@ -82,7 +84,7 @@ func (p *Parser) parsePumpfunAMMSwapEvent(tx *TxInfo, instruction solana.Compile
 	}
 	decoder := ag_binary.NewBorshDecoder(decodedBytes[16:])
 
-	if bytes.Equal(decodedBytes[:16], PumpFunAMMBuyEventDiscriminator[:]) {
+	if bytes.Equal(decodedBytes[:8], AnchorSelfCPIDiscriminator[:]) && bytes.Equal(decodedBytes[8:16], pumpswap.Event_BuyEvent[:]) {
 		buyEvent, err := handlePumpFunAMMBuyEvent(decoder)
 		if err != nil {
 			return fmt.Errorf("error decoding pumpfun amm buy event: %s", err)
@@ -95,7 +97,7 @@ func (p *Parser) parsePumpfunAMMSwapEvent(tx *TxInfo, instruction solana.Compile
 
 		return nil
 	}
-	if bytes.Equal(decodedBytes[:16], PumpFunAMMSellEventDiscriminator[:]) {
+	if bytes.Equal(decodedBytes[:8], AnchorSelfCPIDiscriminator[:]) && bytes.Equal(decodedBytes[8:16], pumpswap.Event_SellEvent[:]) {
 		sellEvent, err := handlePumpFunAMMSellEvent(decoder)
 		if err != nil {
 			return fmt.Errorf("error decoding pumpfun amm sell event: %s", err)
@@ -136,7 +138,7 @@ func (p *Parser) isPumpFunAMMBuyDiscriminator(instr solana.CompiledInstruction) 
 	if err != nil {
 		return false
 	}
-	return bytes.Equal(decodedBytes[:8], PumpFunAMMBuyDiscriminator[:])
+	return bytes.Equal(decodedBytes[:8], pumpswap.Instruction_Buy[:])
 }
 
 // pumpfunDecimals returns the decimals for a PumpFun token.
@@ -167,7 +169,7 @@ func (p *Parser) processPumFumAMMBuySwaps(router solana.PublicKey, instruction s
 		Pool:               p.allAccountKeys[instruction.Accounts[0]],
 		PoolIn:             p.allAccountKeys[instruction.Accounts[8]],
 		PoolOut:            p.allAccountKeys[instruction.Accounts[7]],
-		Protocol:           string(PUMP_FUN),
+		Protocol:           string(PUMPSWAP),
 	}
 	return tx
 }
@@ -187,7 +189,7 @@ func (p *Parser) processPumpFunAMMSellSwaps(router solana.PublicKey, instruction
 		Pool:               p.allAccountKeys[instruction.Accounts[0]],
 		PoolIn:             p.allAccountKeys[instruction.Accounts[7]],
 		PoolOut:            p.allAccountKeys[instruction.Accounts[8]],
-		Protocol:           string(PUMP_FUN),
+		Protocol:           string(PUMPSWAP),
 	}
 	return tx
 }
@@ -200,7 +202,7 @@ func (p *Parser) isPumpFunAMMBuyExactQuoteInDiscriminator(instr solana.CompiledI
 	if err != nil {
 		return false
 	}
-	return bytes.Equal(decodedBytes[:8], PumpFunAMMBuyExactQuoteInDiscriminator[:])
+	return bytes.Equal(decodedBytes[:8], pumpswap.Instruction_BuyExactQuoteIn[:])
 }
 
 func (p *Parser) isPumpFunAMMSellExactInDiscriminator(instr solana.CompiledInstruction) bool {
@@ -222,5 +224,5 @@ func (p *Parser) isPumpFunAMMSellDiscriminator(instr solana.CompiledInstruction)
 	if err != nil {
 		return false
 	}
-	return bytes.Equal(decodedBytes[:8], PumpFunAMMSellDiscriminator[:])
+	return bytes.Equal(decodedBytes[:8], pumpswap.Instruction_Sell[:])
 }

@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/franco-bianco/solanaswap-go/solanaswap-go/meteora_damm_v2"
-	meteoradlmmprogram "github.com/franco-bianco/solanaswap-go/solanaswap-go/meteora_dlmm_program"
-	"github.com/franco-bianco/solanaswap-go/solanaswap-go/meteora_pools_program"
+	"github.com/franco-bianco/solanaswap-go/solanaswap-go/defi/meteora/meteora_damm_v2"
+	meteoradlmmprogram "github.com/franco-bianco/solanaswap-go/solanaswap-go/defi/meteora/meteora_dlmm"
+	"github.com/franco-bianco/solanaswap-go/solanaswap-go/defi/meteora/meteora_pools"
 	"github.com/gagliardetto/solana-go"
 )
 
@@ -54,8 +54,8 @@ func (p *Parser) processMeteoraSwaps(progID solana.PublicKey, outerIndex int, in
 				discriminator := inner.Data[:8]
 
 				inProgID := p.allAccountKeys[inner.ProgramIDIndex]
-			if progID.Equals(inProgID) && (bytes.Equal(discriminator, meteora_pools_program.Instruction_Swap[:]) ||
-				p.isMeteoraDLMMSwap(discriminator) || bytes.Equal(meteora_damm_v2.Instruction_Swap[:], discriminator)) {
+				if progID.Equals(inProgID) && (bytes.Equal(discriminator, meteora_pools.Instruction_Swap[:]) ||
+					p.isMeteoraDLMMSwap(discriminator) || bytes.Equal(meteora_damm_v2.Instruction_Swap[:], discriminator)) {
 					var innerSwaps []SwapData
 					for _, innerInstruction := range inners[i+1:] {
 						inProgID2 := p.allAccountKeys[innerInstruction.ProgramIDIndex]
@@ -156,7 +156,7 @@ func (p *Parser) processMeteoraSwaps(progID solana.PublicKey, outerIndex int, in
 				return nil
 			}
 			discriminator := outerInstriction.Data[:8]
-			if bytes.Equal(discriminator, meteora_pools_program.Instruction_Swap[:]) || p.isMeteoraDLMMSwap(discriminator) ||
+			if bytes.Equal(discriminator, meteora_pools.Instruction_Swap[:]) || p.isMeteoraDLMMSwap(discriminator) ||
 				bytes.Equal(meteora_damm_v2.Instruction_Swap[:], discriminator) {
 				var innerSwaps []SwapData
 				for _, innerInstruction := range inners {
