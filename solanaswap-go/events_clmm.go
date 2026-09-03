@@ -40,7 +40,14 @@ type CLMMStateEvent struct {
 	Kind string
 
 	// Swap fields (post-swap state; Q64.64 sqrt price, raw liquidity).
+	// For liquidity events Liquidity carries the post-change ACTIVE
+	// liquidity (raydium-layout events include it; orca's do not).
 	SqrtPriceX64 *big.Int
+	// AmountIn/AmountOut are the swap's input/output amounts (raw units,
+	// unsigned); filled for both families so replays can settle against
+	// on-chain outcomes.
+	AmountIn  uint64
+	AmountOut uint64
 	// SqrtPriceX64Pre is the pre-swap sqrt price (Q64.64). Orca's Traded
 	// carries it; raydium-layout SwapEvents leave it nil.
 	SqrtPriceX64Pre *big.Int
@@ -124,6 +131,10 @@ func parseCLMMEvent(program solana.PublicKey, raw []byte) (CLMMStateEvent, bool)
 		if err != nil {
 			return CLMMStateEvent{}, false
 		}
+		amountIn, amountOut := ev.Amount1, ev.Amount0 // one-for-zero: token1 in
+		if ev.ZeroForOne {
+			amountIn, amountOut = ev.Amount0, ev.Amount1 // token0 in
+		}
 		return CLMMStateEvent{
 			Program:      program.String(),
 			Pool:         ev.PoolState.String(),
@@ -131,6 +142,8 @@ func parseCLMMEvent(program solana.PublicKey, raw []byte) (CLMMStateEvent, bool)
 			SqrtPriceX64: ev.SqrtPriceX64.BigInt(),
 			Liquidity:    ev.Liquidity.BigInt(),
 			Tick:         ev.Tick,
+			AmountIn:     amountIn,
+			AmountOut:    amountOut,
 		}, true
 	case raydium_clmm.Event_LiquidityChangeEvent:
 		if !isRaydiumLayoutProgram(program.String()) {
@@ -142,12 +155,16 @@ func parseCLMMEvent(program solana.PublicKey, raw []byte) (CLMMStateEvent, bool)
 		}
 		delta := new(big.Int).Sub(ev.LiquidityAfter.BigInt(), ev.LiquidityBefore.BigInt())
 		return CLMMStateEvent{
-			Program:        program.String(),
-			Pool:           ev.PoolState.String(),
-			Kind:           CLMMEventLiquidity,
-			Tick:           ev.Tick,
-			TickLower:      ev.TickLower,
-			TickUpper:      ev.TickUpper,
+			Program:   program.String(),
+			Pool:      ev.PoolState.String(),
+			Kind:      CLMMEventLiquidity,
+			Tick:      ev.Tick,
+			TickLower: ev.TickLower,
+			TickUpper: ev.TickUpper,
+			// the event carries the post-change ACTIVE liquidity: pin the
+			// stored value against incremental drift (stronger than an
+			// Orca-style delta derivation)
+			Liquidity:      ev.LiquidityAfter.BigInt(),
 			DeltaLiquidity: delta,
 		}, true
 	case orca_whirlpool.Event_Traded:
@@ -164,6 +181,8 @@ func parseCLMMEvent(program solana.PublicKey, raw []byte) (CLMMStateEvent, bool)
 			Kind:            CLMMEventSwap,
 			SqrtPriceX64:    ev.PostSqrtPrice.BigInt(),
 			SqrtPriceX64Pre: ev.PreSqrtPrice.BigInt(),
+			AmountIn:        ev.InputAmount,
+			AmountOut:       ev.OutputAmount,
 			// Traded carries no tick/liquidity: the dex side derives the
 			// tick from the post price and keeps the stored liquidity
 			// until the next snapshot refresh.
