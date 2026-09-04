@@ -239,3 +239,57 @@ func TestExtractCLMMStateEventsIgnoresForeignEvents(t *testing.T) {
 		t.Fatal("nil meta must return nil")
 	}
 }
+
+// TestExtractCLMMCreateEvents covers the PoolCreatedEvent extraction: full
+// pool identity (mints, vaults, spacing, initial price) attributed to the
+// invoking program — raydium plus both forks share the layout.
+func TestExtractCLMMCreateEvents(t *testing.T) {
+	ev := raydium_clmm.PoolCreatedEvent{
+		TokenMint0:   solana.MustPublicKeyFromBase58("So11111111111111111111111111111111111111112"),
+		TokenMint1:   solana.MustPublicKeyFromBase58("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"),
+		TickSpacing:  10,
+		PoolState:    solana.MustPublicKeyFromBase58("49iMatQtoyabsYAQc8GafVq6aeBFVDxSRH44oiatyyw6"),
+		SqrtPriceX64: bin.Uint128{Lo: 5452460710584908793},
+		Tick:         -24378,
+		TokenVault0:  solana.MustPublicKeyFromBase58("8sLbNZoA1cfnvMJLPfp98ZLAnFSYCFApfJKMbiXNLwxj"),
+		TokenVault1:  solana.MustPublicKeyFromBase58("7fqohXEWP41Rjwr7Nbo4UQFeDZxJQEmZVup81iFhfMgy"),
+	}
+	body, err := ev.Marshal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	logs := []string{
+		"Program 11111111111111111111111111111111 invoke [1]",
+		invokeLine(raydium_clmm.ProgramID.String()),
+		"Program log: Instruction: CreatePool",
+		b64Line(raydium_clmm.Event_PoolCreatedEvent, body),
+		"Program " + raydium_clmm.ProgramID.String() + " success",
+	}
+	events := ExtractCLMMCreateEvents(&solrpc.TransactionMeta{LogMessages: logs})
+	if len(events) != 1 {
+		t.Fatalf("want 1 event, got %d", len(events))
+	}
+	got := events[0]
+	if got.Pool != ev.PoolState.String() || got.Program != raydium_clmm.ProgramID.String() {
+		t.Fatalf("pool/program mismatch: %+v", got)
+	}
+	if got.Mint0 != ev.TokenMint0.String() || got.Mint1 != ev.TokenMint1.String() {
+		t.Fatalf("mints mismatch: %+v", got)
+	}
+	if got.Vault0 != ev.TokenVault0.String() || got.Vault1 != ev.TokenVault1.String() {
+		t.Fatalf("vaults mismatch: %+v", got)
+	}
+	if got.TickSpacing != 10 || got.Tick != -24378 || got.SqrtPriceX64.Uint64() != 5452460710584908793 {
+		t.Fatalf("spacing/tick/price mismatch: %+v", got)
+	}
+
+	// fork attribution: same discriminator emitted by the byreal program
+	forkLogs := []string{
+		invokeLine(BYREAL_CLMM_PROGRAM_ID.String()),
+		b64Line(raydium_clmm.Event_PoolCreatedEvent, body),
+	}
+	events = ExtractCLMMCreateEvents(&solrpc.TransactionMeta{LogMessages: forkLogs})
+	if len(events) != 1 || events[0].Program != BYREAL_CLMM_PROGRAM_ID.String() {
+		t.Fatalf("fork creation must be attributed to the fork program: %+v", events)
+	}
+}

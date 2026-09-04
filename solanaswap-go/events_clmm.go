@@ -66,6 +66,59 @@ const (
 	CLMMEventLiquidity = "liquidity"
 )
 
+// CLMMCreateEvent is a raydium-layout PoolCreatedEvent (Raydium CLMM and its
+// forks Byreal/PancakeSwap share the anchor layout and discriminator): the
+// full pool identity at creation — mints, vaults, tick spacing and the
+// initial price — so the dex side can register the pool and pre-warm its
+// state the moment it is created instead of at its first swap/LP.
+type CLMMCreateEvent struct {
+	// Program is the on-chain AMM program id; Pool the created pool account.
+	Program string
+	Pool    string
+
+	Mint0   string // tokens by address sort order
+	Mint1   string
+	Vault0  string // vault of mint0 / mint1
+	Vault1  string
+
+	TickSpacing  uint16
+	SqrtPriceX64 *big.Int // initial price, Q64.64
+	Tick         int32    // initial tick
+}
+
+// ExtractCLMMCreateEvents parses raydium-layout PoolCreatedEvent lines from a
+// transaction's logs, attributed to the emitting program via the same invoke
+// call-stack tracking as ExtractCLMMStateEvents.
+func ExtractCLMMCreateEvents(meta *solrpc.TransactionMeta) []CLMMCreateEvent {
+	var out []CLMMCreateEvent
+	forEachAnchorEvent(meta, func(program solana.PublicKey, raw []byte) {
+		var disc [8]byte
+		copy(disc[:], raw[:8])
+		if disc != raydium_clmm.Event_PoolCreatedEvent {
+			return
+		}
+		if !isRaydiumLayoutProgram(program.String()) {
+			return
+		}
+		ev, err := raydium_clmm.ParseEvent_PoolCreatedEvent(raw)
+		if err != nil {
+			return
+		}
+		out = append(out, CLMMCreateEvent{
+			Program:      program.String(),
+			Pool:         ev.PoolState.String(),
+			Mint0:        ev.TokenMint0.String(),
+			Mint1:        ev.TokenMint1.String(),
+			Vault0:       ev.TokenVault0.String(),
+			Vault1:       ev.TokenVault1.String(),
+			TickSpacing:  ev.TickSpacing,
+			SqrtPriceX64: ev.SqrtPriceX64.BigInt(),
+			Tick:         ev.Tick,
+		})
+	})
+	return out
+}
+
 // anchorEventDataPrefix is the log marker anchor emits for event data.
 const anchorEventDataPrefix = "Program data: "
 
@@ -80,6 +133,23 @@ func ExtractCLMMStateEvents(meta *solrpc.TransactionMeta) []CLMMStateEvent {
 		return nil
 	}
 	var out []CLMMStateEvent
+	forEachAnchorEvent(meta, func(program solana.PublicKey, raw []byte) {
+		if ev, ok := parseCLMMEvent(program, raw); ok {
+			out = append(out, ev)
+		}
+	})
+	return out
+}
+
+// forEachAnchorEvent walks a transaction's log lines handing every anchor
+// event payload ("Program data:", base64) to fn together with the program
+// that emitted it, tracked via the program call stack (events are emitted
+// after the instruction's CPIs returned, so the innermost still-executing
+// program owns the line).
+func forEachAnchorEvent(meta *solrpc.TransactionMeta, fn func(program solana.PublicKey, raw []byte)) {
+	if meta == nil {
+		return
+	}
 	var stack []solana.PublicKey
 	current := func() solana.PublicKey {
 		if len(stack) == 0 {
@@ -94,9 +164,7 @@ func ExtractCLMMStateEvents(meta *solrpc.TransactionMeta) []CLMMStateEvent {
 			if err != nil || len(raw) < 8 {
 				continue
 			}
-			if ev, ok := parseCLMMEvent(currentProgram, raw); ok {
-				out = append(out, ev)
-			}
+			fn(currentProgram, raw)
 			continue
 		}
 		// remaining "Program ..." lifecycle lines maintain the call stack
@@ -115,7 +183,6 @@ func ExtractCLMMStateEvents(meta *solrpc.TransactionMeta) []CLMMStateEvent {
 			}
 		}
 	}
-	return out
 }
 
 // parseCLMMEvent decodes one anchor event payload for the emitting program.
