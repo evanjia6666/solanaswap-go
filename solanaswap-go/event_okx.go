@@ -329,10 +329,11 @@ func (p *Parser) processOKXSwaps(instructionIndex int) []SwapData {
 func (p *Parser) processOKXRouterSwaps(instructionIndex int) []SwapData {
 	var swaps []SwapData
 	seen := make(map[string]bool)
-	processedProtocols := make(map[SwapType]bool)
+	// aggregate scanners (pumpfun curve/AMM) run once per program; windowed
+	// scanners run per matching inner invocation so every leg is emitted
+	processedAggregates := make(map[string]bool)
 
 	innerInstructions := p.getInnerInstructions(instructionIndex)
-	// p.Log.Infof("processing okx router swaps for instruction %d: %d inner instructions", instructionIndex, len(innerInstructions))
 	if len(innerInstructions) == 0 {
 		p.Log.Warnf("no inner instructions for instruction %d", instructionIndex)
 		return swaps
@@ -344,35 +345,12 @@ func (p *Parser) processOKXRouterSwaps(instructionIndex int) []SwapData {
 		switch {
 		case progID.Equals(RAYDIUM_V4_PROGRAM_ID) ||
 			progID.Equals(RAYDIUM_CPMM_PROGRAM_ID) ||
-			// progID.Equals(RAYDIUM_AMM_ROUTER_PROGRAM_ID) ||
 			progID.Equals(RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID):
-			if processedProtocols[RAYDIUM] {
-				continue
-			}
-			if raydSwaps := p.processRaydSwaps(progID, instructionIndex, idx, &inner, true); len(raydSwaps) > 0 {
-				// for _, swap := range raydSwaps {
-				// 	key := getSwapKey(swap)
-				// 	if !seen[key] {
-				swaps = append(swaps, raydSwaps...)
-				// 		seen[key] = true
-				// 	}
-				// }
-				processedProtocols[RAYDIUM] = true
-			}
+			swaps = append(swaps, p.processRaydSwaps(progID, instructionIndex, idx, &inner, true)...)
 
 		case progID.Equals(ORCA_PROGRAM_ID):
-			if processedProtocols[ORCA] {
-				continue
-			}
-			if orcaSwaps := p.processOrcaSwaps(instructionIndex, &inner); len(orcaSwaps) > 0 {
-				for _, swap := range orcaSwaps {
-					key := getSwapKey(swap)
-					if !seen[key] {
-						swaps = append(swaps, swap)
-						seen[key] = true
-					}
-				}
-				processedProtocols[ORCA] = true
+			if orcaSwaps := p.processOrcaSwaps(instructionIndex, idx, &inner); len(orcaSwaps) > 0 {
+				swaps = append(swaps, orcaSwaps...)
 			}
 
 		case progID.Equals(METEORA_PROGRAM_ID) ||
@@ -380,22 +358,12 @@ func (p *Parser) processOKXRouterSwaps(instructionIndex int) []SwapData {
 			progID.Equals(METEORA_DLMM_PROGRAM_ID) ||
 			progID.Equals(BYREAL_CLMM_PROGRAM_ID) ||
 			progID.Equals(METEORA_DAMM_V2):
-			// if processedProtocols[METEORA] {
-			// 	continue
-			// }
 			if meteoraSwaps := p.processMeteoraSwaps(progID, instructionIndex, idx, true); len(meteoraSwaps) > 0 {
-				// for _, swap := range meteoraSwaps {
-				// 	key := getSwapKey(swap)
-				// 	if !seen[key] {
 				swaps = append(swaps, meteoraSwaps...)
-				// 		seen[key] = true
-				// 	}
-				// }
-				// processedProtocols[METEORA] = true
 			}
 
 		case progID.Equals(PUMP_FUN_PROGRAM_ID):
-			if processedProtocols[PUMP_FUN] {
+			if processedAggregates[progID.String()] {
 				continue
 			}
 			if pumpfunSwaps := p.processPumpfunSwaps(instructionIndex); len(pumpfunSwaps) > 0 {
@@ -406,30 +374,19 @@ func (p *Parser) processOKXRouterSwaps(instructionIndex int) []SwapData {
 						seen[key] = true
 					}
 				}
-				processedProtocols[PUMP_FUN] = true
+				processedAggregates[progID.String()] = true
 			}
 
 		case progID.Equals(PUMPFUN_AMM_PROGRAM_ID):
-			if processedProtocols[PUMP_FUN] {
+			if processedAggregates[progID.String()] {
 				continue
 			}
-			pumpfunAMMSwaps := p.processPumpfunAMMSwaps(instructionIndex, true)
-			swaps = append(swaps, pumpfunAMMSwaps...)
-			//; len(pumpfunAMMSwaps) > 0 {
-			// 	for _, swap := range pumpfunAMMSwaps {
-			// 		key := getSwapKey(swap)
-			// 		if !seen[key] {
-			// 			swaps = append(swaps, swap)
-			// 			seen[key] = true
-			// 		}
-			// 	}
-			// }
-			processedProtocols[PUMP_FUN] = true
+			swaps = append(swaps, p.processPumpfunAMMSwaps(instructionIndex, true)...)
+			processedAggregates[progID.String()] = true
 		}
 
 	}
 
-	// p.Log.Infof("processed okx router swaps: %d unique swaps", len(swaps))
 	return swaps
 }
 

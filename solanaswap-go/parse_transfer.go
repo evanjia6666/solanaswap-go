@@ -182,14 +182,32 @@ func (p *Parser) parseTransferTxInfo(progId solana.PublicKey, instructionIndex i
 	return
 }
 
-func (p *Parser) processOrcaSwaps(instructionIndex int, ammInstruction *solana.CompiledInstruction) []SwapData {
+func (p *Parser) processOrcaSwaps(instructionIndex int, innerIdx int, ammInstruction *solana.CompiledInstruction) []SwapData {
 	var swaps []SwapData
 	for _, innerInstructionSet := range p.txMeta.InnerInstructions {
 		if innerInstructionSet.Index == uint16(instructionIndex) {
 			var innerSwaps []SwapData
-			for _, innerInstruction := range innerInstructionSet.Instructions {
+			for i, innerInstruction := range innerInstructionSet.Instructions {
+				// Windowed when invoked as a router inner target: only scan
+				// transfers after this whirlpool instruction and stop at the
+				// next known AMM — otherwise a multi-whirlpool route yields
+				// one mixed aggregate per leg (duplicated + cross-mixed).
+				if ammInstruction != nil && i < innerIdx {
+					continue
+				}
+				if ammInstruction != nil && i > innerIdx {
+					if p.isKnownAMM(p.allAccountKeys[p.convertRPCToSolanaInstruction(innerInstruction).ProgramIDIndex]) {
+						break
+					}
+				}
 				if p.isTransfer(p.convertRPCToSolanaInstruction(innerInstruction)) {
 					transfer := p.processTransfer(p.convertRPCToSolanaInstruction(innerInstruction))
+					if transfer != nil {
+						innerSwaps = append(innerSwaps, SwapData{Type: ORCA, Data: transfer})
+					}
+				} else if p.isTransferCheck(p.convertRPCToSolanaInstruction(innerInstruction)) {
+					// transfer-fee mints (Token-2022) move via transferChecked
+					transfer := p.processTransferCheck(p.convertRPCToSolanaInstruction(innerInstruction))
 					if transfer != nil {
 						innerSwaps = append(innerSwaps, SwapData{Type: ORCA, Data: transfer})
 					}
@@ -197,6 +215,11 @@ func (p *Parser) processOrcaSwaps(instructionIndex int, ammInstruction *solana.C
 			}
 			tx, err := p.parseTransferTxInfo(ORCA_PROGRAM_ID, instructionIndex, ORCA, innerSwaps, ammInstruction)
 			if err == nil {
+				if ammInstruction != nil {
+					outer := p.txInfo.Message.Instructions[instructionIndex]
+					tx.Router = p.allAccountKeys[outer.ProgramIDIndex]
+					tx.Index += uint(innerIdx)
+				}
 				swaps = append(swaps, SwapData{Type: ORCA, Tx: tx})
 			}
 		}

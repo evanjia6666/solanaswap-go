@@ -146,6 +146,32 @@ func TestRegression_AllCases(t *testing.T) {
 			},
 		},
 		{
+			// Bitget DEX aggregator split route: SOL split across two whirlpools
+			// and one Raydium CLMM, all legs buying the same Token-2022 mint.
+			// Before the orca windowing + Token-2022 transfer fixes both orca
+			// legs were dropped entirely (T2022 plain transfers were not
+			// collected), and had they been collected they would have come out
+			// as duplicated mixed aggregates of the whole inner set.
+			name: "Bitget Aggregator — split route, 2× Orca (Token-2022) + CLMM",
+			sig:  "3JeWKtNvtKuTNLnrywbZSGQRga8v5soorf1qfRKi9wvjGg6F6uBuC8cSSBvjUQzrkrxqT6bBt6iaFC4RgrPnVJkt",
+			expected: []legExpectation{
+				{"Orca", "So11111111111111111111111111111111111111112", "9cRCn9rGT8V2imeM2BaKs13yhMEais3ruM3rPvTGpump", 61441250, 30670587, "FXyy7qDb75QxxnsnKpdSD2qaQSSm8CbYT3hEzMt7UBw5", "3oigEFcZRfJqJNQnAKxViRko6vVgcjwh2L9Xy5CW3WY7", "FkLcuMeqHozjRXMpsEtXhGqKHBpAmC4UZ9ybRq6T6xB4", "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"},
+				{"Orca", "So11111111111111111111111111111111111111112", "9cRCn9rGT8V2imeM2BaKs13yhMEais3ruM3rPvTGpump", 30248000, 15111367, "CNTPTpytHK9txrsPCvaEnc3PoN9ZVWDDcSnFSZZonMue", "DgKED8DK1byHPaAjhYguE3UmehPGJyvc7pn38KySWApd", "3nz2nXypJqTLi88Wce1ACQxhKkrXENbiTE7CvUc2mcXo", "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"},
+				{"Raydium", "So11111111111111111111111111111111111111112", "9cRCn9rGT8V2imeM2BaKs13yhMEais3ruM3rPvTGpump", 2835750, 1417489, "74UCGDNEXVH26DWfswmFbVDZA7VG9Dp7yYP2CG4F76DN", "A78CEMb3zhiLzt8rCgvPwViePeoWQy71L6vFAw4Fe2D4", "8MuB1MGgEfwHuxfHMw8bGz3yNPtQFn6w9zvTg4gS6jSY", "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK"},
+			},
+		},
+		{
+			// OKX router two-hop whirlpool route (Xsf9mB→USDC→SOL). The OKX
+			// path's per-family dedup used to collapse the second whirlpool
+			// leg; windowing emits both with unique indexes.
+			name: "OKX Router — 2× Orca two-hop",
+			sig:  "5PwfLp1JstucUU7GpRNzFqocvbJMHGWMzyHNUdPKuos25djarMSFmPHJ3knE5VUWz8kfRpU4TXpFmDmqwavP5daW",
+			expected: []legExpectation{
+				{"Orca", "Xsf9mBktVB9BSU5kf4nHxPq5hCBJ2j2ui3ecFGxPRGc", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 3454316, 669666, "hSQxf9L7Tpwf1PKjWWSbnew2vyTPpGrfWwNa4gq2n2x", "DYVwasvF7Vvvnx8nL9oYTYBAX1pMBt7H5sGSwLXRZhn4", "8T1wnPCX1Wzg7x9nyPKimxn9vFHzt6VfUCMAFcRPA24C", "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"},
+				{"Orca", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "So11111111111111111111111111111111111111112", 133934, 1275531, "BSddxwYW73as8852ZTHRH13pbZEmZ96NBjayc5mSVtkZ", "BHqCWgG33QpPb17ryW5Hbfc4oP18UFcZ1GQdB5aAqu48", "F4CAXDT5v7F7XpqPqKqPbBpj2uuncGHXsXg9xD3CCejA", "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"},
+			},
+		},
+		{
 			name: "Raydium swap (regression)",
 			sig:  "3XgeS99txr7YDwyw14aVT1tewhQgEgBMzzxT6ZGAVPzusNrgx392wstsbgPrBxnKw6xJLtUfVrQpGvFFU4cQQfj5",
 			expected: []legExpectation{

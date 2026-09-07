@@ -12,7 +12,9 @@ import (
 func (p *Parser) isTransfer(instr solana.CompiledInstruction) bool {
 	progID := p.allAccountKeys[instr.ProgramIDIndex]
 
-	if !progID.Equals(solana.TokenProgramID) {
+	// SPL Token and Token-2022 share the plain Transfer wire format
+	// (3 accounts, tag 3): both are transfers of a pool-leg token.
+	if !progID.Equals(solana.TokenProgramID) && !progID.Equals(solana.Token2022ProgramID) {
 		return false
 	}
 

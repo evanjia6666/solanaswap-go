@@ -16,11 +16,11 @@ func (orcaParser) ProgramIDs() []solana.PublicKey {
 func (orcaParser) Kind() ParserKind { return KindAMM }
 
 func (orcaParser) ParseOuter(ctx *ParseContext, outerIndex int) []SwapData {
-	return ctx.processOrcaSwaps(outerIndex, nil)
+	return ctx.processOrcaSwaps(outerIndex, 0, nil)
 }
 
 func (orcaParser) ParseInner(ctx *ParseContext, outerIndex, innerIndex int, inner solana.CompiledInstruction) []SwapData {
-	return ctx.processOrcaSwaps(outerIndex, &inner)
+	return ctx.processOrcaSwaps(outerIndex, innerIndex, &inner)
 }
 
 func init() { Register(orcaParser{}) }
