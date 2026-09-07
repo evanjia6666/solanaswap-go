@@ -26,8 +26,6 @@ func (meteoraParser) ProgramIDs() []solana.PublicKey {
 
 func (meteoraParser) Kind() ParserKind { return KindAMM }
 
-func (meteoraParser) dedupKey() string { return PROTOCOL_METEORA }
-
 func (meteoraParser) ParseOuter(ctx *ParseContext, outerIndex int) []SwapData {
 	ix := ctx.txInfo.Message.Instructions[outerIndex]
 	progID := ctx.allAccountKeys[ix.ProgramIDIndex]

@@ -70,93 +70,6 @@ func (p *Parser) processRaydSwaps(router solana.PublicKey, instructionIndex int,
 		}
 	}
 
-	if router.Equals(RAYDIUM_AMM_ROUTER_PROGRAM_ID) && isInner {
-		innerInstructions := p.getInnerInstructions(instructionIndex)
-		var swaps []SwapData
-		for i, innerInstruction := range innerInstructions {
-			pID := p.allAccountKeys[innerInstruction.ProgramIDIndex]
-			if pID.Equals(RAYDIUM_CPMM_PROGRAM_ID) || pID.Equals(RAYDIUM_V4_PROGRAM_ID) || pID.Equals(RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID) {
-				tx := &TxInfo{}
-				tx.Type = TxTypeSwap
-				tx.Router = router
-				tx.Amm = pID
-				tx.Owner = *p.txInfo.Message.Signers().Last()
-				tx.Index = uint(instructionIndex*256) + uint(i)
-
-				innerSwaps := []SwapData{}
-				for _, inner := range innerInstructions[i:] {
-					switch {
-					case p.isTransfer(inner):
-						transfer := p.processTransfer(inner)
-						if transfer != nil {
-							innerSwaps = append(innerSwaps, SwapData{Type: RAYDIUM, Data: transfer})
-						}
-					case p.isTransferCheck(inner):
-						transfer := p.processTransferCheck(inner)
-						if transfer != nil {
-							innerSwaps = append(innerSwaps, SwapData{Type: RAYDIUM, Data: transfer})
-						}
-
-					}
-					if len(innerSwaps) >= 2 {
-						break
-					}
-				}
-				for i, swap := range innerSwaps {
-					switch swap.Data.(type) {
-					case *TransferData:
-						transfer := swap.Data.(*TransferData)
-						if i == 0 {
-							tx.InputMint = solana.MustPublicKeyFromBase58(transfer.Mint)
-							tx.InputMintDecimals = transfer.Decimals
-							tx.InputAmount = transfer.Info.Amount
-							continue
-						}
-
-						if tx.InputMint.Equals(solana.MustPublicKeyFromBase58(transfer.Mint)) {
-							// Input already set, skip subsequent transfers of the same mint
-							continue
-						}
-
-						tx.OutputMint = solana.MustPublicKeyFromBase58(transfer.Mint)
-						tx.OutputMintDecimals = transfer.Decimals
-						tx.OutputAmount = transfer.Info.Amount
-					case *TransferCheck:
-						transfer := swap.Data.(*TransferCheck)
-						amount, _ := strconv.ParseFloat(transfer.Info.TokenAmount.Amount, 64)
-						if i == 0 {
-							tx.InputMint = solana.MustPublicKeyFromBase58(transfer.Info.Mint)
-							tx.InputMintDecimals = transfer.Info.TokenAmount.Decimals
-							tx.InputAmount = uint64(amount)
-							continue
-						}
-
-						if tx.InputMint.Equals(solana.MustPublicKeyFromBase58(transfer.Info.Mint)) {
-							// Input already set, skip subsequent transfers of the same mint
-							continue
-						}
-
-						tx.OutputMint = solana.MustPublicKeyFromBase58(transfer.Info.Mint)
-						tx.OutputMintDecimals = transfer.Info.TokenAmount.Decimals
-						tx.OutputAmount = uint64(amount)
-					}
-				}
-
-				if err := p.setTxPoolInfo(pID, tx, innerInstruction); err != nil {
-					p.Log.Error(err)
-					return swaps
-				}
-
-				swaps = append(swaps, SwapData{
-					Data: nil,
-					Tx:   tx,
-					Type: RAYDIUM,
-				})
-			}
-		}
-		return swaps
-	}
-
 	var swaps []SwapData
 	for _, innerInstructionSet := range p.txMeta.InnerInstructions {
 		if innerInstructionSet.Index == uint16(instructionIndex) {
@@ -194,6 +107,13 @@ func (p *Parser) processRaydSwaps(router solana.PublicKey, instructionIndex int,
 			}
 			tx, err := p.parseTransferTxInfo(router, instructionIndex, RAYDIUM, innerSwaps, inst)
 			if err == nil {
+				if isInner {
+					// attribute the leg to the router that wrapped it, and
+					// keep leg indexes unique within the router instruction
+					outer := p.txInfo.Message.Instructions[instructionIndex]
+					tx.Router = p.allAccountKeys[outer.ProgramIDIndex]
+					tx.Index += uint(innerIdx)
+				}
 				swaps = append(swaps, SwapData{Type: RAYDIUM, Tx: tx})
 			}
 		}

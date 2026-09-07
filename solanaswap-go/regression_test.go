@@ -132,6 +132,20 @@ func TestRegression_AllCases(t *testing.T) {
 			},
 		},
 		{
+			// Raydium AMM Router (routeUGWg…) wrapping CPMM→CLMM. The CLMM hop uses
+			// the deployed versioned swap encoding (0x01 + constant, no anchor
+			// sighash) and used to be dropped twice over: the family-level router
+			// dedup skipped it after the CPMM leg was parsed, and the discriminator
+			// whitelist rejected the versioned prefix. Both legs must resolve with
+			// vaults attributed to the router.
+			name: "Raydium AMM Router — CPMM→CLMM (versioned swapV2)",
+			sig:  "2xQeZg6v9bWRgeVgisLSWEYmvV1FNkKMQRbTnKACwAvP32xxz93j4iJCeeDB8nMRBu2XduGQ1veew3oMaQ42ezTm",
+			expected: []legExpectation{
+				{"Raydium", "9RS8C1Tfa3tvG8Wv5cXqfFwcGrFBdzxrkhnjMA6qb6iy", "XsaBXg8dU5cPM6ehmVctMkVqoiRG2ZjMo1cyBJ3AykQ", 470622344, 72476, "GwmMmCnmFioqe9UqMv1sNNfr8dX7h8ATVwKFiYuiQrgk", "ncPvcKFUYXX6FjqYtbwVnkMkdfzjhMHbYA26bXGLXDt", "GyRnq5yXQzDh4PsRKoV4B9msomYDbm5DZvVYXKtzBGa1", "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C"},
+				{"Raydium", "XsaBXg8dU5cPM6ehmVctMkVqoiRG2ZjMo1cyBJ3AykQ", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 72476, 64639, "7HNwUP5rSUo9GfdDthJn4UCdw2Px6h2aprSedD7r7J3C", "9U6aKhHYFB3ViSPqQzKbkUPFg7hYahLk6njnzy15Smf6", "4Rq5cbWuaEHfzzwmbpuvkF4CbmWETXvo11aaaZm7dcQe", "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK"},
+			},
+		},
+		{
 			name: "Raydium swap (regression)",
 			sig:  "3XgeS99txr7YDwyw14aVT1tewhQgEgBMzzxT6ZGAVPzusNrgx392wstsbgPrBxnKw6xJLtUfVrQpGvFFU4cQQfj5",
 			expected: []legExpectation{

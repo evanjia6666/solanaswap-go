@@ -15,7 +15,11 @@ func (pumpfunBondingCurveParser) ProgramIDs() []solana.PublicKey {
 	}
 }
 func (pumpfunBondingCurveParser) Kind() ParserKind { return KindAMM }
-func (pumpfunBondingCurveParser) dedupKey() string { return PROTOCOL_PUMPFUN }
+
+// aggregatesInner: processPumpfunSwaps scans the whole inner-instruction set,
+// so the router dispatcher must run it once per program (not per invoke).
+func (pumpfunBondingCurveParser) aggregatesInner() bool { return true }
+
 func (pumpfunBondingCurveParser) ParseOuter(ctx *ParseContext, outerIndex int) []SwapData {
 	return ctx.processPumpfunSwaps(outerIndex)
 }
@@ -31,7 +35,10 @@ func (pumpfunAMMParser) ProgramIDs() []solana.PublicKey {
 	return []solana.PublicKey{PUMPFUN_AMM_PROGRAM_ID}
 }
 func (pumpfunAMMParser) Kind() ParserKind { return KindAMM }
-func (pumpfunAMMParser) dedupKey() string { return PROTOCOL_PUMPFUN }
+
+// aggregatesInner: processPumpfunAMMSwaps scans the whole inner-instruction
+// set, so the router dispatcher must run it once per program (not per invoke).
+func (pumpfunAMMParser) aggregatesInner() bool { return true }
 
 func (pumpfunAMMParser) ParseOuter(ctx *ParseContext, outerIndex int) []SwapData {
 	return ctx.processPumpfunAMMSwaps(outerIndex, false)

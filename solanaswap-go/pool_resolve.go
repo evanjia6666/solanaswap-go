@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/big"
 
 	"github.com/gagliardetto/solana-go"
 	"github.com/shopspring/decimal"
@@ -118,4 +119,101 @@ func (p *ParseContext) resolvePoolInfo(tx *TxInfo, instruction solana.CompiledIn
 
 	tx.Protocol = l.protocol
 	return nil
+}
+
+// clmmEventPoolFallback settles a Raydium-layout CLMM leg whose instruction
+// layout probe failed. It matches an unconsumed swap event of the same
+// program by amounts to learn the pool, then locates the pool's vaults among
+// the post token balances — current raydium-layout pools own their vaults
+// directly, so vault ownership doubles as pool-identity proof. SPL transfers
+// and anchor events are stable contracts; the swap instruction encoding is
+// not (versioned swaps, forks), so this path keeps legs flowing across
+// wire-format drift instead of dropping them.
+func (p *Parser) clmmEventPoolFallback(progID solana.PublicKey, tx *TxInfo) bool {
+	if tx.InputMint.IsZero() || tx.OutputMint.IsZero() || p.txMeta == nil {
+		return false
+	}
+	events := p.clmmSwapEventLegs()
+
+	// pass 1: exact both-side amount match; pass 2: a single unconsumed event
+	// of this program with either side matching (transfer fees can offset one
+	// side). Anything else is too ambiguous to settle a pool from.
+	pool := solana.PublicKey{}
+	for pass := 0; pass < 2 && pool.IsZero(); pass++ {
+		matched, candidates := -1, 0
+		for i := range events {
+			ev := &events[i]
+			if p.clmmSwapEvtsUsed[i] || ev.Program != progID.String() {
+				continue
+			}
+			both := ev.AmountIn == tx.InputAmount && ev.AmountOut == tx.OutputAmount
+			either := ev.AmountIn == tx.InputAmount || ev.AmountOut == tx.OutputAmount
+			if pass == 0 && !both || pass == 1 && !either {
+				continue
+			}
+			matched, candidates = i, candidates+1
+			if pass == 0 {
+				break
+			}
+		}
+		if matched >= 0 && (pass == 0 || candidates == 1) {
+			pool = solana.MustPublicKeyFromBase58(events[matched].Pool)
+			p.clmmSwapEvtsUsed[matched] = true
+		}
+	}
+	if pool.IsZero() {
+		return false
+	}
+
+	var inAmt, outAmt *big.Int
+	for _, b := range p.postBalance {
+		if b.Owner == nil || !b.Owner.Equals(pool) {
+			continue
+		}
+		if b.Mint.Equals(tx.InputMint) {
+			tx.PoolIn = p.allAccountKeys[b.AccountIndex]
+			tx.InputMintDecimals = b.UiTokenAmount.Decimals
+			if a, err := decimal.NewFromString(b.UiTokenAmount.Amount); err == nil {
+				inAmt = a.BigInt()
+			}
+		} else if b.Mint.Equals(tx.OutputMint) {
+			tx.PoolOut = p.allAccountKeys[b.AccountIndex]
+			tx.OutputMintDecimals = b.UiTokenAmount.Decimals
+			if a, err := decimal.NewFromString(b.UiTokenAmount.Amount); err == nil {
+				outAmt = a.BigInt()
+			}
+		}
+	}
+	if tx.PoolIn.IsZero() || tx.PoolOut.IsZero() {
+		return false
+	}
+	tx.PoolInAmount, tx.PoolOutAmount = inAmt, outAmt
+	tx.Pool = pool
+	tx.Type = TxTypeSwap
+	switch {
+	case progID.Equals(RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID):
+		tx.Protocol = string(RAYDIUM)
+	case progID.Equals(BYREAL_CLMM_PROGRAM_ID):
+		tx.Protocol = "Byreal CLMM"
+	default:
+		tx.Protocol = "PancakeSwap"
+	}
+	p.Log.Warnf("clmm leg settled via swap event (layout probe failed): pool=%s amm=%s sig=%v",
+		pool, progID, p.txInfo.Signatures)
+	return true
+}
+
+// clmmSwapEventLegs lazily extracts this tx's CLMM swap events (liquidity and
+// create events are irrelevant for settling swap legs).
+func (p *Parser) clmmSwapEventLegs() []CLMMStateEvent {
+	if !p.clmmSwapEvtsInit {
+		p.clmmSwapEvtsInit = true
+		for _, ev := range ExtractCLMMStateEvents(p.txMeta) {
+			if ev.Kind == CLMMEventSwap {
+				p.clmmSwapEvts = append(p.clmmSwapEvts, ev)
+			}
+		}
+		p.clmmSwapEvtsUsed = make([]bool, len(p.clmmSwapEvts))
+	}
+	return p.clmmSwapEvts
 }

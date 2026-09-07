@@ -20,9 +20,7 @@ import (
 )
 
 const (
-	PROTOCOL_RAYDIUM = "raydium"
 	PROTOCOL_ORCA    = "orca"
-	PROTOCOL_METEORA = "meteora"
 	PROTOCOL_PUMPFUN = "pumpfun"
 )
 
@@ -43,6 +41,13 @@ type Parser struct {
 	Log             *logrus.Logger
 
 	postBalance map[uint16]*rpc.TokenBalance
+
+	// clmmSwapEvts caches the tx's CLMM swap events (lazily extracted) for
+	// clmmEventPoolFallback; clmmSwapEvtsUsed marks events already consumed
+	// by a settled leg so the same event cannot back two legs.
+	clmmSwapEvts     []CLMMStateEvent
+	clmmSwapEvtsUsed []bool
+	clmmSwapEvtsInit bool
 }
 
 var (
@@ -495,19 +500,22 @@ func (p *Parser) processRouterSwaps(instructionIndex int) []SwapData {
 		return swaps
 	}
 
-	processedProtocols := make(map[string]bool)
+	processedAggregates := make(map[string]bool)
 
 	for idx, inner := range innerInstructions {
 		progID := p.allAccountKeys[inner.ProgramIDIndex]
 
 		pr, ok := lookupParser(progID)
 		if ok && pr.Kind() == KindAMM {
-			if d, ok := pr.(routerDeduper); ok {
-				key := d.dedupKey()
-				if processedProtocols[key] {
+			// Aggregate (non-windowed) parsers run once per program; windowed
+			// parsers run per matching inner instruction so every leg of a
+			// multi-leg route is recovered.
+			if _, agg := pr.(aggregateParser); agg {
+				key := progID.String()
+				if processedAggregates[key] {
 					continue
 				}
-				processedProtocols[key] = true
+				processedAggregates[key] = true
 			}
 			if innerSwaps := pr.ParseInner(p, instructionIndex, idx, inner); len(innerSwaps) > 0 {
 				swaps = append(swaps, innerSwaps...)
@@ -599,6 +607,18 @@ type TxInfo struct {
 	Protocol           string
 }
 
+// versionedCLMMSwapPrefix is the non-anchor wire prefix of the deployed
+// Raydium-layout CLMM swap instructions (observed on swapV2BaseIn et al.):
+// data[0]=0x01 marks the instruction version followed by a fixed constant.
+// The anchor sighash tables do not know this encoding, and the on-chain
+// program has no IDL — without accepting the prefix, every CLMM leg using it
+// (including all legs routed through the Raydium AMM router) is dropped.
+var versionedCLMMSwapPrefix = []byte{0x01, 0x20, 0xac, 0x01, 0xb7, 0xb5, 0x52}
+
+func isVersionedCLMMSwap(data []byte) bool {
+	return len(data) > len(versionedCLMMSwapPrefix) && bytes.HasPrefix(data, versionedCLMMSwapPrefix)
+}
+
 func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction solana.CompiledInstruction) (err error) {
 	// New path: simple ACCOUNT_INDEX programs registered via RegisterLayout resolve
 	// through the shared resolvePoolInfo service. Falls through to the legacy switch
@@ -606,6 +626,20 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 	if l, ok := lookupLayout(progID); ok {
 		return p.resolvePoolInfo(tx, instruction, l)
 	}
+	if err := p.setTxPoolInfoByLayout(progID, tx, instruction); err != nil {
+		// Raydium-layout CLMM: instruction encodings drift (versioned swaps,
+		// forks). When the layout probe fails, settle the leg against the
+		// program's own swap event + post-balance vault ownership instead of
+		// dropping it — both are stable contracts, unlike the wire format.
+		if isRaydiumLayoutProgram(progID.String()) && p.clmmEventPoolFallback(progID, tx) {
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+func (p *Parser) setTxPoolInfoByLayout(progID solana.PublicKey, tx *TxInfo, instruction solana.CompiledInstruction) (err error) {
 	var discriminatorLen = 8
 	var discriminatorWhiteList [][]byte
 	var poolAccountIndex, poolInAccountIndex, poolOutAccountIndex uint16
@@ -1059,6 +1093,10 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 	}
 
 	discriminator := hex.EncodeToString(instruction.Data[:discriminatorLen])
+	// Versioned (non-anchor) CLMM swaps carry no sighash: accept the known
+	// version prefix as a swap and let the post-balance mint checks below
+	// validate the account layout.
+	versionedSwap := isRaydiumLayoutProgram(pid) && isVersionedCLMMSwap(instruction.Data)
 	var m map[string]bool
 	if len(discriminatorWhiteList) > 0 {
 		m = map[string]bool{}
@@ -1068,13 +1106,15 @@ func (p *Parser) setTxPoolInfo(progID solana.PublicKey, tx *TxInfo, instruction 
 	} else {
 		m = swapDiscriminator
 	}
-	if _, ok := m[discriminator]; ok {
-	} else if _, ok := removeDiscriminator[discriminator]; ok {
-	} else if _, ok := addDiscriminator[discriminator]; ok {
-	} else {
-		err = errors.New("discriminator unmatched")
-		log.Println(err, p.txInfo.Signatures, progID, hex.EncodeToString(instruction.Data), discriminator)
-		return
+	if !versionedSwap {
+		if _, ok := m[discriminator]; ok {
+		} else if _, ok := removeDiscriminator[discriminator]; ok {
+		} else if _, ok := addDiscriminator[discriminator]; ok {
+		} else {
+			err = errors.New("discriminator unmatched")
+			log.Println(err, p.txInfo.Signatures, progID, hex.EncodeToString(instruction.Data), discriminator)
+			return
+		}
 	}
 
 	accLen := len(instruction.Accounts)

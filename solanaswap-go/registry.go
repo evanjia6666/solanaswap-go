@@ -39,17 +39,20 @@ type ProtocolParser interface {
 	ParseInner(ctx *ParseContext, outerIndex, innerIndex int, inner solana.CompiledInstruction) []SwapData
 }
 
-// routerDeduper is an optional capability: AMM parsers that implement it are dispatched
-// at most once per router instruction (keyed on dedupKey), matching the legacy
-// processedProtocols de-dup. Parsers that do not implement it run for every matching
-// inner instruction (the legacy behaviour for ZeroFi/HumidiFi/Manifest).
-type routerDeduper interface {
-	dedupKey() string
+// aggregateParser is an optional capability for AMM parsers whose ParseInner
+// aggregates the whole inner-instruction set instead of windowing to the
+// invoked leg (pumpfun curve/AMM). The router leg dispatcher runs such parsers
+// at most once per program per router instruction to avoid emitting duplicate
+// overlapping aggregates. Windowed parsers (raydium, meteora, ...) run for
+// every matching inner invocation so multi-leg routes of the same family are
+// fully recovered — one dedup key per family used to silently drop e.g. the
+// CLMM leg of a Raydium-router CPMM→CLMM route.
+type aggregateParser interface {
+	aggregatesInner() bool
 }
 
 var (
 	registry    = map[solana.PublicKey]ProtocolParser{}
-	routerSet   = map[solana.PublicKey]bool{}
 	knownAMMSet = map[solana.PublicKey]bool{}
 )
 
@@ -58,11 +61,8 @@ var (
 func Register(p ProtocolParser) {
 	for _, id := range p.ProgramIDs() {
 		registry[id] = p
-		switch p.Kind() {
-		case KindAMM:
+		if p.Kind() == KindAMM {
 			knownAMMSet[id] = true
-		default:
-			routerSet[id] = true
 		}
 	}
 }
@@ -89,6 +89,3 @@ func lookupLayout(id solana.PublicKey) (poolLayout, bool) {
 	l, ok := layoutRegistry[id]
 	return l, ok
 }
-
-// isMigrated reports whether a program has been moved onto the registry dispatch path.
-// During migration this gates which programs use the new path vs the legacy switch.

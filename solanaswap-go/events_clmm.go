@@ -76,10 +76,10 @@ type CLMMCreateEvent struct {
 	Program string
 	Pool    string
 
-	Mint0   string // tokens by address sort order
-	Mint1   string
-	Vault0  string // vault of mint0 / mint1
-	Vault1  string
+	Mint0  string // tokens by address sort order
+	Mint1  string
+	Vault0 string // vault of mint0 / mint1
+	Vault1 string
 
 	TickSpacing  uint16
 	SqrtPriceX64 *big.Int // initial price, Q64.64
