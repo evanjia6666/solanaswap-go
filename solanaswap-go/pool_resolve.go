@@ -78,6 +78,12 @@ func (p *ParseContext) resolvePoolInfo(tx *TxInfo, instruction solana.CompiledIn
 	poolInAccountIndex = instruction.Accounts[poolInAccountIndex]
 	poolOutAccountIndex = instruction.Accounts[poolOutAccountIndex]
 
+	// a pool is never a token account: reject the leg when the layout guess
+	// landed on a vault/user ATA (it would register a bogus pool upstream)
+	if _, isTokenAccount := p.postBalance[instruction.Accounts[poolAccountIndex]]; isTokenAccount {
+		return fmt.Errorf("pool account %s is a token account (layout mismatch)", p.allAccountKeys[instruction.Accounts[poolAccountIndex]])
+	}
+
 	tx.Pool = p.allAccountKeys[instruction.Accounts[poolAccountIndex]]
 	tx.PoolIn = p.allAccountKeys[poolInAccountIndex]
 	tx.PoolOut = p.allAccountKeys[poolOutAccountIndex]
