@@ -345,7 +345,8 @@ func (p *Parser) processOKXRouterSwaps(instructionIndex int) []SwapData {
 		switch {
 		case progID.Equals(RAYDIUM_V4_PROGRAM_ID) ||
 			progID.Equals(RAYDIUM_CPMM_PROGRAM_ID) ||
-			progID.Equals(RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID):
+			progID.Equals(RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID) ||
+			progID.Equals(BYREAL_CLMM_PROGRAM_ID):
 			swaps = append(swaps, p.processRaydSwaps(progID, instructionIndex, idx, &inner, true)...)
 
 		case progID.Equals(ORCA_PROGRAM_ID):
@@ -356,7 +357,6 @@ func (p *Parser) processOKXRouterSwaps(instructionIndex int) []SwapData {
 		case progID.Equals(METEORA_PROGRAM_ID) ||
 			progID.Equals(METEORA_POOLS_PROGRAM_ID) ||
 			progID.Equals(METEORA_DLMM_PROGRAM_ID) ||
-			progID.Equals(BYREAL_CLMM_PROGRAM_ID) ||
 			progID.Equals(METEORA_DAMM_V2):
 			if meteoraSwaps := p.processMeteoraSwaps(progID, instructionIndex, idx, true); len(meteoraSwaps) > 0 {
 				swaps = append(swaps, meteoraSwaps...)

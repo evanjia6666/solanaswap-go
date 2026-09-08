@@ -2,9 +2,10 @@ package solanaswapgo
 
 import "github.com/gagliardetto/solana-go"
 
-// meteoraParser handles the Meteora family (DLMM, Pools, Dynamic Bonding Curve, DAMM V2)
-// and Byreal CLMM, which share processMeteoraSwaps. It delegates to that function, which
-// scans inner transfers and resolves pool info via setTxPoolInfo.
+// meteoraParser handles the Meteora family (DLMM, Pools, Dynamic Bonding Curve, DAMM V2),
+// which shares processMeteoraSwaps. It delegates to that function, which scans inner
+// transfers and resolves pool info via setTxPoolInfo. Byreal (a Raydium-layout CLMM
+// fork) is handled by raydiumParser.
 //
 // As an outer instruction, some Meteora programs act as routers (e.g. the King7ki… DLMM
 // router): when the direct parse yields nothing, the legacy dispatch fell back to
@@ -18,7 +19,6 @@ func (meteoraParser) ProgramIDs() []solana.PublicKey {
 		METEORA_PROGRAM_ID,
 		METEORA_POOLS_PROGRAM_ID,
 		METEORA_DLMM_PROGRAM_ID,
-		BYREAL_CLMM_PROGRAM_ID,
 		Meteora_Dynamic_Bonding_Curve_Program,
 		METEORA_DAMM_V2,
 	}

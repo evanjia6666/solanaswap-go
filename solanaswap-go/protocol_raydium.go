@@ -2,10 +2,13 @@ package solanaswapgo
 
 import "github.com/gagliardetto/solana-go"
 
-// raydiumParser handles the Raydium AMM family (V4, CPMM, CLMM, Launchlab) as a direct
-// AMM and as a router inner target. It delegates to the existing processRaydSwaps, which
-// owns the transfer-scan + init-liquidity + setTxPoolInfo logic (windowed per inner
-// invocation, so every leg of a same-family route is emitted).
+// raydiumParser handles the Raydium AMM family (V4, CPMM, CLMM, Launchlab)
+// plus Byreal — a full CLMM fork sharing the raydium layout (pool@2,
+// vault@5/6, same anchor events) — as direct AMMs and as router inner
+// targets. It delegates to processRaydSwaps, which owns the transfer-scan +
+// init-liquidity + setTxPoolInfo logic (windowed per inner invocation, so
+// every leg of a same-family route is emitted; setTxPoolInfo classifies by
+// program id, so Byreal legs keep their own protocol label).
 type raydiumParser struct{}
 
 func (raydiumParser) Name() string { return string(RAYDIUM) }
@@ -16,6 +19,7 @@ func (raydiumParser) ProgramIDs() []solana.PublicKey {
 		RAYDIUM_CPMM_PROGRAM_ID,
 		RAYDIUM_CONCENTRATED_LIQUIDITY_PROGRAM_ID,
 		RAYDIUM_LAUNCHLAB_PROGRAM_ID,
+		BYREAL_CLMM_PROGRAM_ID,
 	}
 }
 

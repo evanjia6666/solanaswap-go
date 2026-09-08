@@ -132,6 +132,43 @@ func TestRegression_AllCases(t *testing.T) {
 			},
 		},
 		{
+			// Jupiter shared_accounts_route_v2 that emits NO Jupiter event (the
+			// only "Program data:" line belongs to the Byreal leg itself). The
+			// event path yields nothing; the router fallback must still recover
+			// the byreal leg via the transfer scan — byreal rides raydiumParser
+			// now (processMeteoraSwaps' inner switch has no byreal branch, so
+			// this tx used to parse to zero legs).
+			name: "Jupiter SharedAccountsRouteV2 (no event) — Byreal leg",
+			sig:  "2bj3gaCZwms4VnsxgoQ8meg1CbkRCjmzPNrrpjvVEUigykeY5bDBV2gK2rJCb4pLuygVb9p6xjMUh73w5MBzLkQ3",
+			expected: []legExpectation{
+				{"Byreal CLMM", "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 450000000, 449906423, "HrWp3QR3hNeVy6tEZtcpsjwEiGgKJuL1NDP84EaaU2Nh", "5VAEWoYgDP1V7VhiqVXwifQHNDsg2XXHXfC7RqNENQG5", "4a1yHTgFg3zThr3fKzXdH7GtGzoTRcGMsr7xi3H8U66v", "REALQqNEomY6cQGZJUGwywTBD2UmDT32rZcNnfxQ5N2"},
+			},
+		},
+		{
+			// rexhfZLR… router (registered after being seen wrapping Byreal
+			// two-hop routes): the full chain crosses two byreal pools, a DLMM
+			// and a whirlpool. Unregistered, the whole tx parsed to zero legs.
+			name: "rexhfZLR Router — Byreal×2 + DLMM + Orca",
+			sig:  "4U3v37YDYwGxToHt7JcRunZCodsmsbTe8uGtrgDDpYph7gDQPBVvqq56uFgMrcUFjE2G4NDFcTQRJnUDAswtkZNe",
+			expected: []legExpectation{
+				{"Byreal CLMM", "So11111111111111111111111111111111111111112", "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB", 271907744, 28342962, "DyzGYEhdgSn5EEUt4XXviavZ7v7SV2YGrYV8HX3Aw5XT", "2woLM63wQWnNtQoWhtUfQCUE4fTqyyJN9t3WdtFoF9sN", "yCeSRFxf5zn4nTMV4wjsBswhKD1ac6bz1FsTPSqWeG7", "REALQqNEomY6cQGZJUGwywTBD2UmDT32rZcNnfxQ5N2"},
+				{"Byreal CLMM", "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 28342962, 28337422, "HrWp3QR3hNeVy6tEZtcpsjwEiGgKJuL1NDP84EaaU2Nh", "5VAEWoYgDP1V7VhiqVXwifQHNDsg2XXHXfC7RqNENQG5", "4a1yHTgFg3zThr3fKzXdH7GtGzoTRcGMsr7xi3H8U66v", "REALQqNEomY6cQGZJUGwywTBD2UmDT32rZcNnfxQ5N2"},
+				{"Meteora_DLMM_Program", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN", 28337422, 111578864, "HfgjZDmexhFVD28Vkb1NbQwWeXP3uDcVTLPjSGHmRHhL", "2QANsJARmrkK2ow3eFhuDM8mM7zwZqqSx967RJtVQbYc", "BTN1CZ6riUAkUTnnphfjY1kGWCPUNX47t11DVrapwjGH", "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"},
+				{"Orca", "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN", "So11111111111111111111111111111111111111112", 111578864, 272436969, "C1MgLojNLWBKADvu9BHdtgzz1oZX4dZ5zGdGcgvvW8Wz", "HVJuVW2dRbZ2fynWEY2JK6Ak2YTfVpji73sHZMCqiXSb", "8MFbZEaXp8Ky8ufhZRgphgMgKVwsjhDhZtNqmEPcxvQK", "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"},
+			},
+		},
+		{
+			// Jupiter zap (zapvX9M3…) unwinding a position into a DLMM + two
+			// byreal legs. Unregistered, zero legs.
+			name: "Jupiter Zap — DLMM + Byreal×2",
+			sig:  "4hAiyBECkK5ZddCaHiTsnejYEJhpGcRXgMfQvV3Ur3xuQfBD9QSKv4v9n6YBZjF3NaqbGhLnh8ZB3dGDxWsQ8HZ3",
+			expected: []legExpectation{
+				{"Meteora_DLMM_Program", "Ai66LHZG9MCzg1WKdawwqduVAXpNDUuV8M3uyq5ppump", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 9889930, 297903, "Cgk5DWJc59TcWTQ1iaJ8Hn4bsVjKXJF2fCjPAZtMUSkV", "8Z676fkBBQfa2fYrxssfjAHatKMN5Gv8KHxo6pf1JGgn", "EvDd3P1f5ZgiJc9AyP1ey9K1iVB1ETAJp61RPP8pKVCj", "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"},
+				{"Byreal CLMM", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB", 297903, 297956, "HrWp3QR3hNeVy6tEZtcpsjwEiGgKJuL1NDP84EaaU2Nh", "4a1yHTgFg3zThr3fKzXdH7GtGzoTRcGMsr7xi3H8U66v", "5VAEWoYgDP1V7VhiqVXwifQHNDsg2XXHXfC7RqNENQG5", "REALQqNEomY6cQGZJUGwywTBD2UmDT32rZcNnfxQ5N2"},
+				{"Byreal CLMM", "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB", "So11111111111111111111111111111111111111112", 297956, 2859424, "DyzGYEhdgSn5EEUt4XXviavZ7v7SV2YGrYV8HX3Aw5XT", "yCeSRFxf5zn4nTMV4wjsBswhKD1ac6bz1FsTPSqWeG7", "2woLM63wQWnNtQoWhtUfQCUE4fTqyyJN9t3WdtFoF9sN", "REALQqNEomY6cQGZJUGwywTBD2UmDT32rZcNnfxQ5N2"},
+			},
+		},
+		{
 			// Raydium AMM Router (routeUGWg…) wrapping CPMM→CLMM. The CLMM hop uses
 			// the deployed versioned swap encoding (0x01 + constant, no anchor
 			// sighash) and used to be dropped twice over: the family-level router

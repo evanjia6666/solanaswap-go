@@ -26,6 +26,10 @@ func (genericRouterParser) ProgramIDs() []solana.PublicKey {
 		ARBITRAGE_BOT_3S1R_PROGRAM_ID,
 		ARBITRAGE_BOT_B7QNN_PROGRAM_ID,
 		solana.MustPublicKeyFromBase58("AP51WLiiqTdbZfgyRMs35PsZpdmLuPDdHYmrB23pEtMU"),
+		// Jupiter zap (zapvX9M3…) and the rexhfZLR… router wrap inner AMM
+		// legs like the bots above; seen wrapping Byreal routes on mainnet.
+		solana.MustPublicKeyFromBase58("zapvX9M3uf5pvy4wRPAbQgdQsM1xmuiFnkfHKPvwMiz"),
+		solana.MustPublicKeyFromBase58("rexhfZLRRxRkPkw9izswgMFRPDb9U58jeinH7wqUVuw"),
 	}
 }
 func (genericRouterParser) Kind() ParserKind { return KindRouter }
