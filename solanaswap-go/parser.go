@@ -1117,6 +1117,23 @@ func (p *Parser) setTxPoolInfoByLayout(progID solana.PublicKey, tx *TxInfo, inst
 		}
 	}
 
+	// Raydium-layout CLMM liquidity ops (increase/decrease/open) carry a
+	// PersonalPositionState at the swap-layout pool slot, and their vault
+	// slots can coincide with the swap layout — so no pool can be attributed
+	// from the instruction accounts. Dropping such legs (registered as
+	// "position as pool" bogus records upstream, miscounted as swaps); the
+	// dex side can rebuild LP flows from LiquidityChange events later.
+	if isRaydiumLayoutProgram(pid) {
+		if _, isLiq := removeDiscriminator[discriminator]; isLiq {
+			err = fmt.Errorf("%s: CLMM liquidity leg (remove) — pool not derivable", progID)
+			return
+		}
+		if _, isLiq := addDiscriminator[discriminator]; isLiq {
+			err = fmt.Errorf("%s: CLMM liquidity leg (add) — pool not derivable", progID)
+			return
+		}
+	}
+
 	accLen := len(instruction.Accounts)
 	if accLen < int(poolAccountIndex) || accLen <= int(poolOutAccountIndex) || accLen < int(poolInAccountIndex) {
 		err = fmt.Errorf("account index out of range %d/%d-%d-%d", len(instruction.Accounts), poolAccountIndex, poolInAccountIndex, poolOutAccountIndex)
@@ -1166,6 +1183,16 @@ func (p *Parser) setTxPoolInfoByLayout(progID solana.PublicKey, tx *TxInfo, inst
 			tx.PoolOutAmount = a.BigInt()
 		}
 		tx.OutputMintDecimals = poolOutBalance.UiTokenAmount.Decimals
+	} else if !okIn && !okOut && isRaydiumLayoutProgram(pid) {
+		// a raydium-layout CLMM swap always moves BOTH vaults, so both carry
+		// post balances. Neither carrying one means the account-index guess
+		// did not land on the vaults — typically an LP instruction (open/
+		// increase/decrease) whose accounts[2] is a PersonalPositionState and
+		// whose swap-layout vault slots are tick arrays. The pool attribution
+		// is untrustworthy: drop the leg (the swap-event fallback in the
+		// wrapper can still settle a genuine swap whose layout drifted).
+		err = fmt.Errorf("%s: neither vault carries a post balance (untrusted layout guess, LP leg?)", progID)
+		return
 	}
 
 	tx.Protocol = protocol

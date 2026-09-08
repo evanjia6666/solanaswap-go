@@ -158,6 +158,18 @@ func TestRegression_AllCases(t *testing.T) {
 			},
 		},
 		{
+			// Direct Byreal liquidity op (decrease/remove family): the
+			// instruction's accounts[2] is a PersonalPositionState and its
+			// vault slots coincide with the swap layout, so the leg used to
+			// come out typed as a swap with the POSITION registered as a pool
+			// (dex-side bootstrap then failed "expected discriminator
+			// PoolState, got PersonalPositionState"). CLMM liquidity legs are
+			// dropped: no pool is derivable from the instruction accounts.
+			name:     "Byreal LP op — no bogus position-pool leg",
+			sig:      "cbtvyR3iZDfbVic8DMdmTNjEQasrNzjoRtuCeaJh31XVQP2GPGLdZ5ngzBbC2SybvKQXbaNBCDAHrwfHm8LzGVV",
+			expected: nil,
+		},
+		{
 			// Jupiter zap (zapvX9M3…) unwinding a position into a DLMM + two
 			// byreal legs. Unregistered, zero legs.
 			name: "Jupiter Zap — DLMM + Byreal×2",
