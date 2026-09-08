@@ -134,6 +134,14 @@ func (p *Parser) setPoolInfoFromAMM(tx *TxInfo, ammInstrs []*solana.CompiledInst
 	for i := idx; i < len(ammInstrs); i++ {
 		ammInstr := ammInstrs[i]
 		ammProgID := p.allAccountKeys[ammInstr.ProgramIDIndex]
+		// cross-protocol guard: a leg whose AMM is already inferred (the
+		// SwapsEvent path fills tx.Amm) must settle on that program's
+		// instruction only — the old "first parseable from idx" search could
+		// hand e.g. a byreal leg an orca instruction, registering whirlpools
+		// under the byreal factory (dex-side bootstrap then fails wrong-owner).
+		if !tx.Amm.IsZero() && !tx.Amm.Equals(ammProgID) {
+			continue
+		}
 		err := p.setTxPoolInfo(ammProgID, tx, *ammInstr)
 		if err == nil {
 			return true
