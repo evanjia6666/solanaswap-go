@@ -202,6 +202,15 @@ func (p *Parser) processPumpfunAMMSwaps(PInstructionIndex int, isInner bool) []S
 						break
 					}
 				}
+			default:
+				// router-wrapped LP (rare): keep the vault balances fresh for
+				// pools whose only recent activity was a deposit/withdraw
+				if _, ok := p.isPumpFunAMMLiquidityInstruction(inner); ok {
+					if lpTx := p.processPumpFunAMMLiquidity(pProgID, inner, uint(PInstructionIndex*256)+uint(i)); lpTx != nil {
+						lpTx.Router = p.allAccountKeys[parentInstruction.ProgramIDIndex]
+						innerSwaps = append(innerSwaps, SwapData{Type: PUMPSWAP, Tx: lpTx})
+					}
+				}
 			}
 
 		}
@@ -216,6 +225,13 @@ func (p *Parser) processPumpfunAMMSwaps(PInstructionIndex int, isInner bool) []S
 	case p.isPumpFunAMMSellDiscriminator(parentInstruction) || p.isPumpFunAMMSellExactInDiscriminator(parentInstruction):
 		tx = p.processPumpFunAMMSellSwaps(pProgID, parentInstruction)
 	default:
+		// direct deposit/withdraw: emit an LP leg so the pool's vault
+		// balances stay fresh even without a following swap
+		if _, ok := p.isPumpFunAMMLiquidityInstruction(parentInstruction); ok {
+			if lpTx := p.processPumpFunAMMLiquidity(pProgID, parentInstruction, uint(PInstructionIndex*256)); lpTx != nil {
+				return []SwapData{{Type: PUMPSWAP, Tx: lpTx}}
+			}
+		}
 		return nil
 	}
 	tx.Index = uint(PInstructionIndex * 256)
