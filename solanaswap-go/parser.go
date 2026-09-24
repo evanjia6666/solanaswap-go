@@ -171,20 +171,42 @@ func (p *Parser) ParseTransaction() ([]SwapData, error) {
 			parsedSwaps = append(parsedSwaps, pr.ParseOuter(p, i)...)
 		}
 	}
-	if skip {
-		return p.filterInvalidSwaps(parsedSwaps), nil
+	if !skip {
+		for i, outerInstruction := range p.txInfo.Message.Instructions {
+			progID := p.allAccountKeys[outerInstruction.ProgramIDIndex]
+			pr, ok := lookupParser(progID)
+			if !ok || pr.Kind() != KindAMM {
+				continue
+			}
+			parsedSwaps = append(parsedSwaps, pr.ParseOuter(p, i)...)
+		}
 	}
 
-	for i, outerInstruction := range p.txInfo.Message.Instructions {
-		progID := p.allAccountKeys[outerInstruction.ProgramIDIndex]
-		pr, ok := lookupParser(progID)
-		if !ok || pr.Kind() != KindAMM {
-			continue
-		}
-		parsedSwaps = append(parsedSwaps, pr.ParseOuter(p, i)...)
-	}
+	// A known AMM can sit as a CPI inside a wrapper program that has no
+	// registered parser (LP lock programs like LockrWmn6…, the Jupiter
+	// trigger router BLiaZWNQ…, unnamed bot routers). Both loops above are
+	// driven by top-level programs only, so those legs were silently lost —
+	// observed on mainnet as CPMM withdraws producing zero legs. Sweep the
+	// inner groups of unregistered top-level instructions through the same
+	// router dispatch; registered routers already scanned their own groups
+	// in ParseOuter, so there is no double dispatch.
+	parsedSwaps = append(parsedSwaps, p.sweepUnwrappedInnerAMMs()...)
 
 	return p.filterInvalidSwaps(parsedSwaps), nil
+}
+
+// sweepUnwrappedInnerAMMs dispatches inner AMM instructions of top-level
+// programs that have no registered parser. See ParseTransaction.
+func (p *Parser) sweepUnwrappedInnerAMMs() []SwapData {
+	var swaps []SwapData
+	for i, outerInstruction := range p.txInfo.Message.Instructions {
+		progID := p.allAccountKeys[outerInstruction.ProgramIDIndex]
+		if _, ok := lookupParser(progID); ok {
+			continue
+		}
+		swaps = append(swaps, p.processRouterSwaps(i)...)
+	}
+	return swaps
 }
 
 // filterInvalidSwaps is a final safeguard: it drops any SwapData whose Tx carries the
