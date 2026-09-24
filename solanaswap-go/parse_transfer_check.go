@@ -54,6 +54,23 @@ func (p *Parser) processMeteoraSwaps(progID solana.PublicKey, outerIndex int, in
 				discriminator := inner.Data[:8]
 
 				inProgID := p.allAccountKeys[inner.ProgramIDIndex]
+				if progID.Equals(inProgID) {
+					if l, ok := matchMeteoraLPLayout(progID, discriminator); ok {
+						// liquidity instruction routed through a router: the
+						// settlement transfers follow it, up to the next AMM
+						follow := make([]solana.CompiledInstruction, 0, 4)
+						for _, nx := range inners[i+1:] {
+							nxProg := p.allAccountKeys[nx.ProgramIDIndex]
+							if !nxProg.Equals(progID) && p.isKnownAMM(nxProg) {
+								break
+							}
+							follow = append(follow, nx)
+						}
+						if legs := p.processMeteoraLP(router, progID, outerIndex, inner, l, follow); legs != nil {
+							return legs
+						}
+					}
+				}
 				if progID.Equals(inProgID) && (bytes.Equal(discriminator, meteora_pools.Instruction_Swap[:]) ||
 					p.isMeteoraDLMMSwap(discriminator) || bytes.Equal(meteora_damm_v2.Instruction_Swap[:], discriminator)) {
 					var innerSwaps []SwapData
@@ -156,6 +173,10 @@ func (p *Parser) processMeteoraSwaps(progID solana.PublicKey, outerIndex int, in
 				return nil
 			}
 			discriminator := outerInstriction.Data[:8]
+			if l, ok := matchMeteoraLPLayout(progID, discriminator); ok {
+				router := p.allAccountKeys[outerInstriction.ProgramIDIndex]
+				return p.processMeteoraLP(router, progID, outerIndex, outerInstriction, l, inners)
+			}
 			if bytes.Equal(discriminator, meteora_pools.Instruction_Swap[:]) || p.isMeteoraDLMMSwap(discriminator) ||
 				bytes.Equal(meteora_damm_v2.Instruction_Swap[:], discriminator) {
 				var innerSwaps []SwapData
